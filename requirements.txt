@@ -1,0 +1,9 @@
+flask
+flask-cors
+langchain
+langchain-community
+tiktoken
+pyyaml
+atlassian-python-api
+python-docx
+gunicorn

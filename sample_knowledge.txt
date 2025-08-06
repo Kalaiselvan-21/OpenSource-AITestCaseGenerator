@@ -1,0 +1,56 @@
+# E-Filing System Domain Knowledge
+
+## User Authentication
+
+The e-filing system requires users to authenticate before accessing any features. Authentication is handled through a secure login process that includes:
+
+1. Username/password authentication
+2. Two-factor authentication for sensitive operations
+3. Session timeout after 30 minutes of inactivity
+4. Account lockout after 5 failed login attempts
+
+## Form 2290 Filing Process
+
+Form 2290 is used for Heavy Highway Vehicle Use Tax. The filing process includes:
+
+1. Pre-filing: Users can prepare their filing before the tax period begins
+2. Vehicle information entry: VIN, weight category, and first-used month
+3. Tax calculation: Based on vehicle weight and months of use
+4. Payment processing: Credit card, direct debit, or electronic funds withdrawal
+5. Filing submission: Electronic submission to the IRS
+6. Receipt and confirmation: Users receive a stamped Schedule 1 as proof of payment
+
+## Pre-filing Specific Rules
+
+Pre-filing allows users to prepare their Form 2290 filing before the tax period begins. Key rules include:
+
+1. Pre-filing is available 30 days before the start of the tax period (July 1st)
+2. Users can edit pre-filed returns any time before submission
+3. Pre-filed returns are not submitted to the IRS until the user explicitly submits them
+4. Email notifications are sent to remind users to review and submit their pre-filed returns
+5. Pre-filed returns automatically include all vehicles from the previous year's filing
+
+## Email Notification System
+
+The system sends various email notifications to users:
+
+1. Confirmation emails after filing submission
+2. Reminder emails for upcoming deadlines
+3. Notification emails when a pre-filing is edited
+4. Marketing emails for new features or services
+5. Account security notifications
+
+## Payment Processing
+
+The system supports multiple payment methods:
+
+1. Credit/debit cards (Visa, MasterCard, American Express, Discover)
+2. Electronic funds withdrawal (direct debit)
+3. IRS payment vouchers for mail-in payments
+
+Payment processing includes:
+
+1. Secure transmission of payment information
+2. Real-time validation of payment details
+3. Receipt generation after successful payment
+4. Refund processing for overpayments or duplicate payments

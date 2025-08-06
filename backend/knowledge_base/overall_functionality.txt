@@ -1,0 +1,335 @@
+Below is a detailed summary of the key eForm2290.com features we’ve covered, together with the user-journey (“flow”) for each one. I’ve grouped them by area of functionality.
+
+---
+
+## 1. Registration & Login Flows
+
+### 1.1. New User Registration
+
+1. **Entry**
+
+   * User clicks **File Now** on homepage (no cookie present).
+2. **Register Page**
+
+   * Enters email → if email unknown, presents business-lookup step (USDOT/EIN or manual).
+   * After business info, direct to **Select Form Type** (rapid flow).
+3. **Abandoned-Cart Handling**
+
+   * If user returns via classic abandoned-cart email, they land on `/completeyourform2290` with incomplete sections highlighted.
+
+### 1.2. Returning User / Auto-Login
+
+1. **Entry**
+
+   * User clicks **File Now/Login** (cookie present).
+2. **Cookie Check**
+
+   * If cookie + login within 7 days → auto-login →
+
+     * If no filings yet → **Select Form Type**
+     * If ≥1 completed filing → classic dashboard/filing list
+   * If cookie but last login >7 days → go to **Login Page** (prefilled email; “Remember me” fills password).
+3. **Password Not Set / OTP Flow**
+
+   * Prefilled email, “Login with One-Time Password” prominent.
+   * OTP sent via email (and SMS if phone on file).
+   * Option to “Click here” to email a password-setup link.
+
+---
+
+## 2. Business Lookup & “Find My Business”
+
+### 2.1. USDOT/EIN Search
+
+1. On registration or business-add, user can enter USDOT/EIN.
+2. Info message appears (“You don’t need a USDOT…”)
+3. If match → populate business details, else fallback to manual entry.
+
+### 2.2. Manual Add Business
+
+1. User enters business name, address, EIN, etc.
+2. Saved to user profile → proceeds to **Select Form Type**.
+
+---
+
+## 3. Select Form Type
+
+1. **Landing**
+
+   * Always the first step post-login/registration for new users.
+2. **Options**
+
+   * Single-truck Form 2290
+   * Multiple-truck Form 2290
+3. **CTAs**
+
+   * “Start Filing” →
+
+     * New users → `/complete-your-form2290-filing` (rapid flow)
+     * Existing users → classic flow
+
+---
+
+## 4. Filing Flows
+
+### 4.1. Rapid-Flow Filing (`/complete-your-form2290-filing`)
+
+1. Pre-filled from registration/select-form step
+2. No service-fee or IRS payment selection
+3. Submit → confirmation → pipeline “IRS payment reviewed”
+
+### 4.2. Classic Filing (`/completeyourform2290`)
+
+1. Full form inputs: vehicles, FUM, payment, service fee
+2. Submit → IRS payment → confirmation page
+3. Abandoned or incomplete → can resume → incomplete sections highlighted
+
+---
+
+## 5. Pre-Filing Functionality (Next Tax Year)
+
+### 5.1. Initiation Points
+
+* **Confirmation Page** (2024–25 filing) shows “Pre-File Now” banner
+* **Dashboard** shows “Early bird filing” banner if ≥1 accepted filing
+* **Filing List** shows “Pre-File for 2025–26” in Action column
+
+Absolutely! Here's a **detailed summary** of the knowledge gained about the **eForm2290.com** application and its major **functional flows**, based on our conversation:
+
+---
+
+## 🔍 **eForm2290.com – Functional Overview & Flow Summary**
+
+eForm2290.com is an IRS-authorized platform for electronically filing **Form 2290** for Heavy Vehicle Use Tax (HVUT). The platform supports various types of users including **owner-operators, fleet owners, tax professionals**, and **agents**, and features streamlined flows for new and existing users.
+
+---
+
+### 1. **Login & Registration Flow**
+
+#### Purpose:
+
+Allow new and existing users to sign up or log in via email or social accounts.
+
+#### Flow:
+
+* User lands on `/register-login`.
+* Page displays:
+
+  * Email input field
+  * Continue CTA
+  * OR options for Google and Facebook logins
+  * Consent checkbox
+* If email exists:
+
+  * With password → redirect to login (auto-filled)
+  * Without password → redirect to create password or login via OTP
+* If email doesn’t exist:
+
+  * Register and redirect to USDOT/EIN entry page
+* On successful login:
+
+  * Google/Facebook → go to **Dashboard** or **Select Form** page
+* Error handling:
+
+  * Empty/invalid email alerts
+  * Consent handling
+* Social logins bypass the password and go directly to dashboard or form selection
+
+---
+
+### 2. **Auto-Login & Cookie-Based Redirection**
+
+#### Purpose:
+
+Auto-detect returning users and guide them to the right starting point.
+
+#### Flow:
+
+* On app load, check for:
+
+  * `eform-cookie ID`: long-term identifier for the user
+  * `cookie-session ID`: session-specific identifier
+* If cookie exists:
+
+  * User is auto-logged in
+  * If a filing exists → redirect to **Dashboard**
+  * If no filing → redirect to **Select Form Type**
+* If no cookie:
+
+  * Redirect to registration
+
+---
+
+### 3. **Select Form Type Flow**
+
+#### Purpose:
+
+Let users select the type of Form they want to file (2290, 8849, VIN correction, etc.)
+
+#### Flow:
+
+* Landing options from login, homepage, abandoned cart, or “File Now” CTA
+* If new user (no filing):
+
+  * Redirect to `/complete-your-form2290-filing` page on click of “Start Filing”
+* If existing user:
+
+  * Redirect to classic filing flow
+* Agent or support impersonating user:
+
+  * Same logic applies for redirection
+
+---
+
+### 4. **Add Business Information (V2)**
+
+#### Purpose:
+
+Capture or auto-fill business info based on EIN.
+
+#### Flow:
+
+* Page header updates dynamically:
+
+  * For new users: “Let’s Start Filing 2290…”
+  * Elsewhere: “Add Business Information…”
+* User enters EIN and clicks Search:
+
+  * Loader message appears: “Please Wait...”
+  * If EIN match found → prefill fields, show confirmation message
+  * If no match → show error popup with “Continue” CTA
+* Signing Authority PIN auto-generated using last 5 digits of EIN
+* Post-submission:
+
+  * Redirect to `/complete-your-form2290-filing`
+* Browser back disabled
+* `Edit Business Info` page has:
+
+  * “Edit Business Information” header
+  * Top and bottom back buttons
+  * Delete business option
+
+---
+
+### 5. **Complete Your Form 2290 Filing Page**
+
+#### Purpose:
+
+Guide new users through an optimized, step-by-step flow to complete Form 2290 filing.
+
+#### Flow:
+
+* Triggered from:
+
+  * Select Form Type
+  * Add Business
+  * Abandoned cart email
+* No IRS payment method or service fee selection on this screen
+* Tracks filing stages through the **Rapid Flow Pipeline**
+* Old abandoned cart emails direct to this page with highlighted incomplete areas
+
+---
+
+### 6. **Business List & CTA Behavior**
+
+#### Purpose:
+
+Allow users to manage and select businesses before proceeding to file.
+
+#### Flow:
+
+* Click “File Now” from Business List:
+
+  * If user is **new** → Select Form → then Complete Your Filing
+  * If **existing** → classic filing flow
+* If multiple businesses:
+
+  * Redirect user to Business List
+  * Then proceed to `/complete-your-form2290-filing` after selection
+
+---
+
+### 7. **Abandoned Cart & Deal Stages**
+
+#### Purpose:
+
+Track users who drop off mid-filing and bring them back via reminders.
+
+#### Flow:
+
+* New users who drop off are captured in a **Rapid Flow pipeline**
+* System sends abandoned cart emails
+* Clicking those emails routes user to `/complete-your-form2290-filing`
+
+  * With incomplete sections highlighted
+* Existing user abandoned cart emails route to classic flow
+
+---
+
+### 8. **Clarity Tool Integration (Analytics)**
+
+#### Purpose:
+
+Track user sessions with better mapping using customerId.
+
+#### Flow:
+
+* Implemented via `clarity("identify", "customerId_XXXX")`
+* Helps map users across devices and sessions
+* Custom ID visible in Clarity filters and session recordings
+* Used for session replays, exit tracking, and behavioral insights
+
+---
+
+### 9. **Exit-Intent Popup**
+
+#### Purpose:
+
+Prevent accidental exit from “Pre-file Your Form 2290” page.
+
+#### Flow:
+
+* Triggered only when user tries to leave page via:
+
+  * Mouse movement to header
+  * Clicking truck logo, user profile, IRS logo, or contact support
+* Popup warns and offers chance to stay
+* Doesn’t trigger if user is navigating within the form flow
+
+---
+
+### 10. **Rapid Filing Flow vs. Classic Flow**
+
+#### Purpose:
+
+Segment new and existing users to proper flows.
+
+#### Flow:
+
+* **New Users:**
+
+  * Directed to Select Form → Add Business → Complete Filing
+  * Use **Rapid Flow**
+* **Existing Users:**
+
+  * Directed to Dashboard → Classic filing flow
+  * Maintain all previously used screens and logic
+
+---
+
+## ✅ Summary of Key Functional Segmentation
+
+| Feature                    | New User                       | Existing User                |
+| -------------------------- | ------------------------------ | ---------------------------- |
+| Entry point                | Register/Login or Cookie       | Auto-login or Manual login   |
+| Initial redirect           | Select Form Type               | Dashboard or previous state  |
+| Filing flow                | Rapid Flow                     | Classic Flow                 |
+| Add Business Behavior      | Smart EIN search + autofill    | Editable existing info       |
+| Abandoned cart destination | /complete-your-form2290-filing | Classic filing resumption    |
+| CTA behavior               | Contextual (based on flow)     | Standard CTA to dashboard    |
+| Exit popup                 | Enabled                        | Not applicable on form pages |
+
+---
+
+
+

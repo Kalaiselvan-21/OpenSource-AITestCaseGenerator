@@ -1,0 +1,101 @@
+**Scenario 1: New User on Select Form Type Page (With or Without Incomplete Filings)**
+**Title:** New User Redirected to Complete Your Form 2290 Filing Page Upon Starting Filing
+
+**Test Steps:**
+
+1. Log in as a new user to the IRS e-file system.
+2. Click on the "Start Filing" CTA for Form 2290.
+3. Verify that the user is redirected to the /complete-your-form2290-filing page.
+4. Enter incomplete filing information and click "Continue" button.
+5. Verify that the user is directed back to the select form type page with highlighted incomplete sections.
+6. Click on the "Start Filing" CTA again.
+7. Verify that the user is redirected to the /complete-your-form2290-filing page for completion.
+
+**Expected Result:**
+
+* New users who have not completed a filing yet are directed to the complete-your-form2290-filing page upon clicking the start filing CTA from the select form type page.
+* Existing users continue in the classic flow without interruption.
+
+---
+
+**Scenario 2: Agent Accesses Select Form Type Page on Behalf of New User and Clicks Start Filing CTA**
+**Title:** Agent Redirected to Complete Your Form 2290 Filing Page Upon Starting Filing
+
+**Test Steps:**
+
+1. Log in as an agent to the IRS e-file system.
+2. Access the select form type page on behalf of a new user.
+3. Click on the "Start Filing" CTA for Form 2290.
+4. Verify that the user is redirected to the /complete-your-form2290-filing page.
+5. Enter incomplete filing information and click "Continue" button.
+6. Verify that the user is directed back to the select form type page with highlighted incomplete sections.
+7. Click on the "Start Filing" CTA again.
+8. Verify that the agent is redirected to the /complete-your-form2290-filing page for completion.
+
+**Expected Result:**
+
+* Agents who access the select form type page on behalf of new users are directed to the complete-your-form2290-filing page upon clicking the start filing CTA.
+* Existing users continue in the classic flow without interruption.
+
+---
+
+**Scenario 3: New User Clicks on Business List, Followed by File Now CTA**
+**Title:** New User Redirected to Complete Your Form 2290 Filing Page Upon Clicking File Now CTA
+
+**Test Steps:**
+
+1. Log in to the IRS e-file system as a new user with multiple businesses.
+2. Click on the "Business List" button.
+3. Click on the "File Now" CTA for Form 2290.
+4. Verify that the user is redirected to the /complete-your-form2290-filing page.
+5. Enter incomplete filing information and click "Continue" button.
+6. Verify that the user is directed back to the business list with highlighted incomplete sections.
+7. Click on the "Start Filing" CTA again.
+8. Verify that the user is redirected to the /complete-your-form2290-filing page for completion.
+
+**Expected Result:**
+
+* New users who click on the file now CTA from the business list are directed to the complete-your-form2290-filing page for completion.
+* Existing users continue in the classic flow without interruption.
+
+---
+
+**Scenario 4: New User Lands on Select Form Type Page When There Are Multiple Businesses**
+**Title:** New User Redirected to Complete Your Form 2290 Filing Page Upon Clicking Start Filing CTA with Multiple Businesses
+
+**Test Steps:**
+
+1. Log in to the IRS e-file system as a new user with multiple businesses.
+2. Access the select form type page.
+3. Click on the "Start Filing" CTA for Form 2290.
+4. Verify that the user is redirected to the /complete-your-form2290-filing page.
+5. Enter incomplete filing information and click "Continue" button.
+6. Verify that the user is directed back to the select form type page with highlighted incomplete sections.
+7. Click on the "Start Filing" CTA again.
+8. Verify that the user is redirected to the /complete-your-form2290-filing page for completion.
+
+**Expected Result:**
+
+* New users who have multiple businesses and click on the start filing CTA are directed to the complete-your-form2290-filing page for completion.
+* Existing users continue in the classic flow without interruption.
+
+---
+
+**Scenario 5: Agent Accesses Select Form Type Page on Behalf of New User with Multiple Businesses and Clicks Start Filing CTA**
+**Title:** Agent Redirected to Complete Your Form 2290 Filing Page Upon Clicking Start Filing CTA with Multiple Businesses
+
+**Test Steps:**
+
+1. Log in as an agent to the IRS e-file system on behalf of a new user with multiple businesses.
+2. Access the select form type page on behalf of the new user.
+3. Click on the "Start Filing" CTA for Form 2290.
+4. Verify that the agent is redirected to the /complete-your-form2290-filing page.
+5. Enter incomplete filing information and click "Continue" button.
+6. Verify that the user is directed back to the select form type page with highlighted incomplete sections.
+7. Click on the "Start Filing" CTA again.
+8. Verify that the agent is redirected to the /complete-your-form2290-filing page for completion.
+
+**Expected Result:**
+
+* Agents who access the select form type page on behalf of new users with multiple businesses and click on the start filing CTA are directed to the complete-your-form2290-filing page for completion.
+* Existing users continue in the classic flow without interruption.

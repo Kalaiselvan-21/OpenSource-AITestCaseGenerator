@@ -1,0 +1,535 @@
+
+### **UCR Self-Filing Registration Test Cases**
+
+---
+
+#### 1. Verify navigation from ‘Start Registration’ CTA to USDOT entry page
+
+**Test Steps**
+
+1. Go to the homepage.
+2. Click the ‘Start Registration’ CTA.
+
+**Expected Result**
+
+* User is navigated to the USDOT entry page.
+* URL matches the design reference.
+
+---
+
+#### 2. Validate empty USDOT field submission
+
+**Test Steps**
+
+1. On the USDOT entry page, leave the USDOT field empty.
+2. Click ‘Continue’.
+
+**Expected Result**
+
+* Appropriate field validation error message is displayed as per TRUC-360.
+* ‘Continue’ CTA remains disabled until valid input is provided.
+
+---
+
+#### 3. Validate invalid USDOT number format
+
+**Test Steps**
+
+1. Enter an invalid USDOT number format (e.g., alphabets or less than required digits).
+2. Click ‘Continue’.
+
+**Expected Result**
+
+* Validation error displayed according to TRUC-360.
+
+---
+
+#### 4. Validate non-existing USDOT number
+
+**Test Steps**
+
+1. Enter a USDOT number not found in the database.
+2. Click ‘Continue’.
+
+**Expected Result**
+
+* Header message: "We could not find the details for this USDOT number."
+* CTA displayed to re-enter USDOT number.
+* Clicking CTA navigates to the USDOT entry page.
+
+---
+
+#### 5. Validate existing USDOT number found in database
+
+**Test Steps**
+
+1. Enter a valid USDOT number found in the database.
+2. Click ‘Continue’.
+
+**Expected Result**
+
+* Header message: "We successfully found the details for this USDOT number."
+* Hashed details displayed as per design.
+* Email & Mobile Phone fields displayed as mandatory.
+
+---
+
+#### 6. Validate mandatory field enforcement (Email & Mobile)
+
+**Test Steps**
+
+1. Leave Email or Mobile Phone empty.
+2. Click ‘Start Registration’.
+
+**Expected Result**
+
+* Mandatory field validation message displayed.
+* Form submission blocked.
+
+---
+
+#### 7. Verify USDOT number change functionality
+
+**Test Steps**
+
+1. On the USDOT found page, click ‘Change USDOT’.
+2. Edit the USDOT number.
+
+**Expected Result**
+
+* All other fields and CTAs are disabled except ‘Update’ and ‘Cancel’.
+* Clicking ‘Update’ re-searches database with new USDOT.
+* Clicking ‘Cancel’ restores original USDOT and re-enables form fields.
+
+---
+
+#### 8. Navigate to UCR self-filing form after valid details
+
+**Test Steps**
+
+1. Enter valid details on USDOT found page.
+2. Click ‘Start Registration’.
+
+**Expected Result**
+
+* Lands on Form Page 1 with pre-filled data where available.
+
+---
+
+#### 9. Validate Form Page 1 default registration year
+
+**Test Steps**
+
+1. Load Form Page 1 before September 30, 2025.
+2. Check dropdown values.
+
+**Expected Result**
+
+* Default year: 2025.
+* Dropdown contains 2024 and 2025.
+
+---
+
+#### 10. Validate Form Page 1 year selection after October 1, 2025
+
+**Test Steps**
+
+1. Load Form Page 1 after October 1, 2025.
+2. Check dropdown values.
+
+**Expected Result**
+
+* Default year: 2026.
+* Dropdown contains 2025 and 2026.
+
+---
+
+#### 11. Verify classification selection
+
+**Test Steps**
+
+1. Select each classification option individually and in combination.
+
+**Expected Result**
+
+* Multiple selections allowed.
+* If only Broker/Leasing selected and vehicle count > 0 → special prompt displayed and skip to Form Page 3.
+
+---
+
+#### 12. Verify Continue Registration CTA enablement on Form Page 1
+
+**Test Steps**
+
+1. Try clicking ‘Continue Registration’ without filling all mandatory fields.
+
+**Expected Result**
+
+* CTA remains disabled until all mandatory fields are filled.
+
+---
+
+#### 13. Validate navigation from Form Page 1 to Form Page 2
+
+**Test Steps**
+
+1. Fill all mandatory fields.
+2. Click ‘Continue Registration’.
+
+**Expected Result**
+
+* Lands on Form Page 2.
+* Progress bar shows 50%.
+
+---
+
+#### 14. Validate Add/Exclude vehicle logic on Form Page 2
+
+**Test Steps**
+
+1. Select ‘Yes’ for Add/Exclude option.
+2. Fill additional and exclusion counts.
+
+**Expected Result**
+
+* Total Vehicles computed correctly = Pre-fetched + Additional - Excluded.
+
+---
+
+#### 15. Validate Go Back functionality on Form Page 2
+
+**Test Steps**
+
+1. Click ‘Go Back’.
+
+**Expected Result**
+
+* Returns to Form Page 1 with previously entered data intact.
+
+---
+
+#### 16. Validate Form Page 3 pre-filled billing info
+
+**Test Steps**
+
+1. Load Form Page 3.
+
+**Expected Result**
+
+* Billing info pre-filled from MCS Principal Address by default.
+* Option to pre-fill from Mailing Address available.
+
+---
+
+#### 17. Validate ACH/E-Check default selection and mandatory fields
+
+**Test Steps**
+
+1. Keep ACH/E-Check selected.
+2. Leave Account Number/Confirm/Routing Number empty.
+3. Try to continue.
+
+**Expected Result**
+
+* Validation messages displayed for mandatory fields.
+
+---
+
+#### 18. Validate Mail-In Payment option
+
+**Test Steps**
+
+1. Select Mail-In Payment.
+2. Continue.
+
+**Expected Result**
+
+* No ACH/E-Check field validations triggered.
+* Lands on Pay Service Fee page.
+
+---
+
+#### 19. Validate Pay Service Fee page
+
+**Test Steps**
+
+1. Review service fee details.
+2. Click ‘Pay & Finish’.
+
+**Expected Result**
+
+* Lands on Confirmation Page upon successful transaction.
+
+---
+
+#### 20. Verify Confirmation Page scenarios
+
+**Test Steps**
+
+1. Complete filing with different triggers (Biennial Due, USDOT inactive, Vehicle count updated).
+
+**Expected Result**
+
+* Corresponding message shown based on trigger.
+* Discount coupon displayed if applicable.
+
+---
+
+#### 21. Validate email and SMS notifications on Mark Submitted
+
+**Test Steps**
+
+1. CS agent marks self-submitted filing as Submitted.
+
+**Expected Result**
+
+* Email sent as per UCR Tracker config.
+* SMS with correct template sent.
+
+---
+
+#### 22. Validate email and SMS notifications on Mark Complete
+
+**Test Steps**
+
+1. CS agent marks filing as Complete.
+
+**Expected Result**
+
+* Email sent with UCR/Voucher PDF attached.
+* SMS with correct completion template sent.
+
+
+### **Negative Test Cases for UCR Self-Filing Flow**
+
+---
+
+#### 1. Submit USDOT field with special characters
+
+**Test Steps**
+
+1. On USDOT entry page, enter a value like `1234@#$`.
+2. Click ‘Continue’.
+
+**Expected Result**
+
+* Error message: “Invalid USDOT number format” displayed as per TRUC-360.
+* User cannot proceed.
+
+---
+
+#### 2. Submit USDOT field with fewer than required digits
+
+**Test Steps**
+
+1. Enter a USDOT number shorter than required length.
+2. Click ‘Continue’.
+
+**Expected Result**
+
+* Error message displayed according to field validation rules.
+
+---
+
+#### 3. Submit USDOT field with leading/trailing spaces
+
+**Test Steps**
+
+1. Enter a valid USDOT number but add spaces at start/end.
+2. Click ‘Continue’.
+
+**Expected Result**
+
+* Spaces are trimmed OR validation error shown based on TRUC-360.
+
+---
+
+#### 4. Leave all mandatory fields blank on USDOT found page
+
+**Test Steps**
+
+1. Enter valid USDOT number.
+2. On USDOT found page, leave Email and Mobile Phone blank.
+3. Click ‘Start Registration’.
+
+**Expected Result**
+
+* Error messages displayed for both fields.
+* CTA remains disabled until valid data entered.
+
+---
+
+#### 5. Enter invalid email format
+
+**Test Steps**
+
+1. On USDOT found page, enter “abc\@com” as Email.
+2. Fill other fields validly.
+3. Click ‘Start Registration’.
+
+**Expected Result**
+
+* Validation error: “Enter a valid email address” displayed.
+
+---
+
+#### 6. Enter invalid phone number format
+
+**Test Steps**
+
+1. Enter a phone number with letters or fewer digits (e.g., `12345abc`).
+2. Click ‘Start Registration’.
+
+**Expected Result**
+
+* Validation error for invalid phone format displayed.
+
+---
+
+#### 7. Change USDOT to invalid number
+
+**Test Steps**
+
+1. On USDOT found page, click ‘Change USDOT’.
+2. Enter invalid number and click ‘Update’.
+
+**Expected Result**
+
+* Error message: “Invalid USDOT number” displayed.
+* Form remains disabled.
+
+---
+
+#### 8. Try to skip classification selection on Form Page 1
+
+**Test Steps**
+
+1. Leave classification unselected.
+2. Fill other mandatory fields.
+3. Click ‘Continue Registration’.
+
+**Expected Result**
+
+* Error message prompting to select at least one classification.
+
+---
+
+#### 9. Enter negative vehicle count in Add/Exclude field
+
+**Test Steps**
+
+1. On Form Page 2, select ‘Yes’ for Add/Exclude.
+2. Enter negative numbers in Additional CMVs or Excluded CMVs.
+3. Click ‘Continue Registration’.
+
+**Expected Result**
+
+* Validation error: “Value cannot be negative” displayed.
+
+---
+
+#### 10. Enter non-numeric vehicle count
+
+**Test Steps**
+
+1. On Form Page 2, enter alphabets in Additional CMVs.
+2. Click ‘Continue Registration’.
+
+**Expected Result**
+
+* Validation error for non-numeric input displayed.
+
+---
+
+#### 11. Enter invalid postal code
+
+**Test Steps**
+
+1. On Form Page 3, enter a postal code with letters (if numeric expected) or incorrect length.
+2. Click ‘Continue Filing’.
+
+**Expected Result**
+
+* Postal code validation error displayed.
+
+---
+
+#### 12. Leave ACH/E-Check fields blank
+
+**Test Steps**
+
+1. On Form Page 3, keep ACH/E-Check selected.
+2. Leave Account Number, Confirm Account Number, and Routing Number blank.
+3. Click ‘Continue Filing’.
+
+**Expected Result**
+
+* Mandatory field error messages displayed for each empty field.
+
+---
+
+#### 13. Mismatched Account Number and Confirm Account Number
+
+**Test Steps**
+
+1. On Form Page 3, enter different values in Account Number and Confirm Account Number.
+2. Click ‘Continue Filing’.
+
+**Expected Result**
+
+* Error message: “Account number does not match” displayed.
+
+---
+
+#### 14. Enter invalid routing number format
+
+**Test Steps**
+
+1. Enter letters or wrong length routing number.
+2. Click ‘Continue Filing’.
+
+**Expected Result**
+
+* Routing number validation error displayed.
+
+---
+
+#### 15. Try to proceed without selecting payment mode
+
+**Test Steps**
+
+1. On Form Page 3, deselect all payment modes (if possible via dev tools).
+2. Click ‘Continue Filing’.
+
+**Expected Result**
+
+* Error message: “Please select a payment mode” displayed.
+
+---
+
+#### 16. Attempt to refresh browser during payment
+
+**Test Steps**
+
+1. On Pay Service Fee page, before completing payment, refresh the page.
+
+**Expected Result**
+
+* User warned of potential data loss or redirected to payment start page.
+
+---
+
+#### 17. Attempt to navigate back after payment success
+
+**Test Steps**
+
+1. Complete payment successfully.
+2. Click browser Back button.
+
+**Expected Result**
+
+* User should not be able to re-initiate payment accidentally.
+* Redirect to Confirmation Page or dashboard.
+
+---
+
