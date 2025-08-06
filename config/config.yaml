@@ -1,0 +1,32 @@
+# AI Test Case Generator Configuration
+
+# LLM Configuration
+llm:
+  provider: "ollama"
+  model: "mistral"
+  temperature: 0.7
+  max_tokens: 2000
+
+# Confluence Configuration
+confluence:
+  url: "https://yourcompany.atlassian.net/wiki"  # Replace with your Confluence URL
+  username: "your_email@domain.com"              # Replace with your Confluence username
+  # Don't store API tokens in config files, use environment variables instead
+  # api_token: "your_api_token"
+
+# Output Configuration
+output:
+  default_directory: "./output"
+  default_format: "markdown"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "ai_test_generator.log"
+
+# API Configuration
+api:
+  port: 5000
+  host: "0.0.0.0"
+  debug: false
+  cors_origins: ["http://localhost:3000", "https://yourcompany.com"]  # Replace with your domains

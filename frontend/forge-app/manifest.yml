@@ -1,0 +1,21 @@
+modules:
+  jira:issuePanel:
+    - key: test-case-generator-panel
+      function: main
+      title: AI Test Case Generator
+      icon: https://developer.atlassian.com/platform/forge/images/issue-panel-icon.svg
+  function:
+    - key: main
+      handler: index.run
+
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - storage:app
+  external:
+    fetch:
+      backend:
+        - https://0462-3-222-49-19.ngrok-free.app
+        - http://localhost:5002
+        - http://localhost:5000

@@ -1,0 +1,115 @@
+# Test Case Best Practices
+
+Here’s a detailed guide on **how to write effective test steps, test case titles, and expected results**, aligned with **industry standards**:
+
+## Writing Effective Test Steps
+- Each test step should be a clear, actionable instruction
+- Start each step with an action verb (Navigate, Enter, Click, Verify)
+- Include specific details about where and how to perform the action
+- Avoid vague instructions like "check if it works"
+- Break complex actions into multiple steps
+
+## Creating Good Test Case Titles
+- Be specific and descriptive
+- Include the feature being tested
+- Indicate the scenario or condition being tested
+- Use proper capitalization and CamelCase for technical terms
+- Keep titles concise but complete
+
+## Writing Clear Expected Results
+- Describe the exact expected outcome
+- Include all observable results
+- Be specific about what should appear, change, or happen
+- Include validation points that can be verified
+- Start with capital letters and use proper grammar
+
+---
+
+### **✅ 1. Test Case Title – Best Practices**
+
+**Purpose:** It should clearly describe *what* is being tested in *what context*.
+
+#### ✔️ Good Practices:
+
+* Keep it **concise but descriptive**.
+* Include **module/feature name + condition + expected behavior**.
+* Use **imperative mood** (e.g., "Verify", "Check", "Validate").
+
+#### 🟢 Examples:
+
+* `Verify login with valid credentials`
+* `Validate error message when password is left blank on registration`
+* `Check that user can download the invoice in PDF format`
+
+#### 🔴 Bad Examples:
+
+* `Login test`
+* `Testing something`
+* `Check screen`
+
+---
+
+### **✅ 2. Test Steps – Best Practices**
+
+**Purpose:** Break down the user’s action into logical, repeatable instructions.
+
+#### ✔️ Good Practices:
+
+* Write steps as **actionable, numbered steps**.
+* Use **imperative verbs** like *Click*, *Enter*, *Select*, *Navigate to*.
+* Be **specific** (don’t say "enter details" — say "enter valid email: [user@example.com](mailto:user@example.com)").
+
+#### 🟢 Example:
+
+**Steps:**
+
+1. Navigate to [https://example.com/login](https://example.com/login)
+2. Enter valid email: `user@example.com`
+3. Enter valid password: `User@123`
+4. Click on the **Login** button
+
+#### 🔴 Bad Example:
+
+* Login with valid credentials
+  (Missing detail, not reproducible without guessing)
+
+---
+
+### **✅ 3. Expected Result – Best Practices**
+
+**Purpose:** Clearly define *what outcome is expected* after the test steps are completed.
+
+#### ✔️ Good Practices:
+
+* Be **precise and measurable**.
+* Include **UI feedback, system behavior, or state change**.
+* "It should work".
+
+#### 🟢 Examples:
+
+* User should redirected to the dashboard page with a welcome message: **"Welcome, John!"**
+* Error message **"Password is required"** should be displayed in red under the password field.
+* PDF invoice should be downloaded and opens with correct billing details.
+* "User should be logged in"
+* "System should work"
+* "Data should be saved"
+
+---
+
+### ✅ Summary Cheat Sheet
+
+| Element             | Do                                           | Avoid                               |
+| ------------------- | -------------------------------------------- | ----------------------------------- |
+| **Title**           | Start with "Verify", "Check", "Validate"     | Being too vague or general          |
+| **Test Steps**      | Use numbered, clear steps                    | Skipping steps or using vague verbs |
+| **Expected Result** | Describe **visible/system behavior** clearly | General words like "works fine"     |
+
+---
+
+### ✅ Bonus Tips:
+
+* **Include test data** inline or in a separate column.
+* If applicable, add **preconditions** like "User must be logged in".
+* Keep **one validation per test case** for better traceability and automation.
+
+---

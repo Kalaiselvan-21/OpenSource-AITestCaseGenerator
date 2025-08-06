@@ -1,0 +1,25 @@
+modules:
+  jira:issuePanel:
+    - key: ai-test-agent
+      function: main
+      title: AI Test Case Generator
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+      render: native
+  function:
+    - key: main
+      handler: index.run
+    - key: getIssueDetails
+      handler: index.getIssueDetails
+    - key: genTestCases
+      handler: index.generateTestCasesDirectly
+    - key: exportTestCases
+      handler: index.exportTestCases
+app:
+  id: ari:cloud:ecosystem::app/c6d7a812-b39d-41dd-8b03-6a44ca81ee2a
+  runtime:
+    name: nodejs20.x
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - storage:app
