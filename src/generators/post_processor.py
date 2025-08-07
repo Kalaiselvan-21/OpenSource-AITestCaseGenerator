@@ -5,7 +5,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 def post_process_test_cases(test_cases: str) -> str:
-    print("[DEBUG] post_process_test_cases CALLED")  # Debug marker
     """
     Post-process test cases to remove unwanted fields (Test Data, Priority, Description)
     
