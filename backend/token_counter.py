@@ -28,7 +28,6 @@ class TokenCounter:
         # Initialize or load the log file
         self._init_log_file()
         
-        print(f"TokenCounter initialized with log file: {self.log_file_path}")
     
     def _init_log_file(self):
         """Initialize or load the log file"""
@@ -53,7 +52,6 @@ class TokenCounter:
                 try:
                     with open(self.log_file_path, 'r') as f:
                         json.load(f)
-                    print(f"Loaded existing token usage log from {self.log_file_path}")
                 except json.JSONDecodeError:
                     print(f"Warning: Token usage log at {self.log_file_path} contains invalid JSON. Creating new file.")
                     # Backup the corrupted file
@@ -101,7 +99,6 @@ class TokenCounter:
         # This is closer to GPT's actual tokenization for English text
         token_count = int(len(words) * 1.67)
         
-        print(f"Counted {token_count} tokens in text of length {len(text)} with {len(words)} words")
         return token_count
     
     def log_request(self, request_type, prompt_text, completion_text=None, metadata=None):
@@ -122,7 +119,6 @@ class TokenCounter:
             completion_tokens = self.count_tokens(completion_text) if completion_text else 0
             total_tokens = prompt_tokens + completion_tokens
             
-            print(f"Logging request: {request_type}, prompt_tokens={prompt_tokens}, completion_tokens={completion_tokens}")
             
             # Create the request entry
             request_entry = {
@@ -154,7 +150,6 @@ class TokenCounter:
                 with open(self.log_file_path, 'w') as f:
                     json.dump(log_data, f, indent=2)
                     
-                print(f"Logged request with {total_tokens} tokens ({prompt_tokens} prompt, {completion_tokens} completion)")
                 
             except Exception as e:
                 print(f"Error updating token log: {str(e)}")
