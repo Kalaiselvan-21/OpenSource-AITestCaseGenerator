@@ -159,12 +159,10 @@ ACCEPTANCE CRITERIA:
 {acceptance_criteria}
 
 INSTRUCTIONS:
-- For EACH acceptance criterion listed above, generate at least one specific test case that directly addresses it.
-- The test cases MUST be generated in the SAME ORDER as the acceptance criteria. The first test case should correspond to the first acceptance criterion, the second to the second, and so on.
-- Number the test cases to match the criteria.
-- Each test case title must start with 'Verify' or 'Validate'.
-- Use the domain knowledge and examples above to ensure context-appropriate test cases.
-- Include both positive and negative test scenarios.
+- Generate comprehensive test cases covering all acceptance criteria
+- Each test case title must start with 'Verify' or 'Validate'
+- Use the domain knowledge and examples above to ensure context-appropriate test cases
+- Include both positive and negative test scenarios
 - For each test case, provide:
   * Clear, descriptive title
   * Numbered test steps
@@ -172,11 +170,11 @@ INSTRUCTIONS:
   * Any relevant preconditions
 
 IMPORTANT:
-- Ensure EVERY acceptance criterion has corresponding test cases (no omissions).
-- Use specific details from the domain knowledge when relevant.
-- Follow patterns from similar examples but adapt to current requirements.
-- Include edge cases and error scenarios.
-- Be specific, not generic.
+- Ensure EVERY acceptance criterion has corresponding test cases
+- Use specific details from the domain knowledge when relevant
+- Follow patterns from similar examples but adapt to current requirements
+- Include edge cases and error scenarios
+- Be specific, not generic
 
 Generate the test cases now:
 """
@@ -188,7 +186,6 @@ Generate the test cases now:
                 logger.info("✅ AI-only prompt template initialized with HuggingFace context support")
             else:
                 logger.error("❌ Cannot create chain: LLM not available")
-                
         else:
             # AI mode failed - no prompt template in AI-only mode
             logger.error("❌ AI-only mode: Cannot initialize prompt template without AI components")
@@ -200,13 +197,13 @@ Generate the test cases now:
         Generate test cases using AI-ONLY approach with HuggingFace embeddings + Ollama LLM
         
         Args:
-            description (str): The user story or feature description (mandatory)
-            acceptance_criteria (str): The acceptance criteria for the feature (mandatory)
-            use_knowledge (bool, optional): Whether to use domain knowledge (default: True)
-        
+            description (str): The user story or feature description
+            acceptance_criteria (str): The acceptance criteria for the feature
+            use_knowledge (bool): Whether to use domain knowledge (default: True)
+            
         Returns:
             str: The generated test cases as a string
-        
+            
         Raises:
             RuntimeError: If AI components are not available and ai_only=True
         """
@@ -222,38 +219,84 @@ Generate the test cases now:
         # Get enhanced context using FAISS vector store with HuggingFace embeddings
         domain_knowledge = ""
         similar_examples = ""
-        
+
         if use_knowledge and self.vector_store:
             try:
                 # Use FAISS vector store for semantic search with HuggingFace embeddings
                 query = f"{description}\n{acceptance_criteria}"
-                
+
                 # Get relevant domain knowledge
                 domain_context = self.vector_store.get_relevant_context(
                     query=query,
                     max_tokens=1000
                 )
-                
+
                 # Get similar test case examples
                 similar_docs = self.vector_store.similarity_search(
                     query=f"test cases examples for {description}",
                     k=3
                 )
-                
+
                 domain_knowledge = domain_context if domain_context != "No relevant context found." else ""
-                
+
                 if similar_docs:
                     similar_examples = "\n---\n".join([
                         f"Example from {doc.metadata.get('filename', 'knowledge base')}:\n{doc.page_content[:500]}..."
                         for doc in similar_docs
                     ])
-                
+
                 print(f"[AI] 🤗 Using semantic search")
-                
+
             except Exception as e:
                 logger.error(f"❌ FAISS vector store failed: {str(e)}")
                 # In AI-only mode, we don't fallback - we fail
                 raise RuntimeError(f"AI-only mode: FAISS vector store failed: {str(e)}")
+
+        # Parse acceptance criteria into a numbered list for clarity
+        def enumerate_criteria(ac_text):
+            import re
+            items = []
+            # Try to split by numbered items (1., 2., etc.)
+            numbered = re.split(r'\d+\.', ac_text)
+            if len(numbered) > 1:
+                if not numbered[0].strip():
+                    numbered = numbered[1:]
+                items = [item.strip() for item in numbered if item.strip()]
+            else:
+                bullet_split = re.split(r'[\*\-•]', ac_text)
+                if len(bullet_split) > 1:
+                    if not bullet_split[0].strip():
+                        bullet_split = bullet_split[1:]
+                    items = [item.strip() for item in bullet_split if item.strip()]
+                else:
+                    items = [line.strip() for line in ac_text.split('\n') if line.strip()]
+            return items
+
+        # (Removed duplicate block)
+
+        print(f"[AI] 🚀 Generating test cases")
+
+        # Parse acceptance criteria for validation
+        def enumerate_criteria(ac_text):
+            import re
+            items = []
+            # Try to split by numbered items (1., 2., etc.)
+            numbered = re.split(r'\d+\.', ac_text)
+            if len(numbered) > 1:
+                if not numbered[0].strip():
+                    numbered = numbered[1:]
+                items = [item.strip() for item in numbered if item.strip()]
+            else:
+                bullet_split = re.split(r'[\*\-•]', ac_text)
+                if len(bullet_split) > 1:
+                    if not bullet_split[0].strip():
+                        bullet_split = bullet_split[1:]
+                    items = [item.strip() for item in bullet_split if item.strip()]
+                else:
+                    items = [line.strip() for line in ac_text.split('\n') if line.strip()]
+            return items
+
+        ac_items = enumerate_criteria(acceptance_criteria)
 
         # Create the prompt input for AI mode
         prompt_input = {
@@ -262,32 +305,48 @@ Generate the test cases now:
             "domain_knowledge": domain_knowledge,
             "similar_examples": similar_examples
         }
-        
-        print(f"[AI] 🚀 Generating test cases")
-        
+
         # Generate test cases using AI-only approach
         try:
             result = self.chain.invoke(prompt_input)
             if isinstance(result, dict) and 'content' in result:
-                return result['content']
-            return str(result)
-            
+                output = result['content']
+            else:
+                output = str(result)
+
+            # Post-processing: check number of test cases matches number of criteria
+            # Simple heuristic: count lines starting with '1.', '2.', etc. or 'Test Case 1:', etc.
+            num_criteria = len(ac_items)
+            import re
+            # Try to count test case sections
+            tc_pattern = re.compile(r'^(?:\d+\.|Test Case \d+:)', re.MULTILINE)
+            matches = tc_pattern.findall(output)
+            num_test_cases = len(matches)
+
+            if num_test_cases < num_criteria:
+                logger.warning(f"⚠️ Only {num_test_cases} test cases generated for {num_criteria} acceptance criteria. Output may be incomplete.")
+                output += f"\n\n[WARNING] Only {num_test_cases} test cases generated for {num_criteria} acceptance criteria. Please review and regenerate if needed."
+
+            return output
+
         except Exception as e:
             logger.error(f"❌ AI test case generation failed: {str(e)}")
             logger.error(traceback.format_exc())
             raise RuntimeError(f"AI-only mode: Test case generation failed: {str(e)}")
 
+        # (Removed duplicate block)
+
     def generate_test_cases_with_metadata(self, description: str, acceptance_criteria: str, use_knowledge: bool = True) -> Dict[str, Any]:
         """
-        Generate test cases and return with metadata about the AI-only generation process
-        
+        Generate test cases and return with metadata about the AI-only generation process.
+
         Args:
-            description: User story description
-            acceptance_criteria: Acceptance criteria
-            use_knowledge: Whether to use knowledge base
-            
+            description (str): User story description
+            acceptance_criteria (str): Acceptance criteria
+            use_knowledge (bool): Whether to use knowledge base
+
         Returns:
-            Dictionary with test cases and metadata
+            dict: Dictionary with test cases and metadata
         """
         start_time = datetime.now()
         
@@ -335,14 +394,14 @@ Generate the test cases now:
 
     def search_similar_test_cases(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
         """
-        Search for similar test cases in the vector store (AI mode only)
-        
+        Search for similar test cases in the vector store (AI mode only).
+
         Args:
-            query: Search query
-            k: Number of results to return
-            
+            query (str): Search query
+            k (int): Number of results to return
+
         Returns:
-            List of similar test cases with metadata
+            list: List of similar test cases with metadata
         """
         if self.ai_mode != "ai" or not self.vector_store:
             logger.warning("⚠️ Vector search not available in fallback mode")
@@ -368,10 +427,10 @@ Generate the test cases now:
 
     def get_generation_statistics(self) -> Dict[str, Any]:
         """
-        Get statistics about the test case generation system
-        
+        Get statistics about the test case generation system.
+
         Returns:
-            Dictionary with system statistics
+            dict: Dictionary with system statistics
         """
         stats = {
             "llm_model": "llama2" if self.llm else "not_initialized",
