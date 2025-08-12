@@ -134,24 +134,24 @@ class TestCaseGenerator:
 
     # Removed _initialize_fallback_components method - AI-ONLY mode
 
-    def _initialize_prompt_template(self):
-        """
-        Initialize the AI-only prompt template with HuggingFace context support
-        """
-        from langchain_core.prompts import PromptTemplate
-        if self.ai_mode == "ai":
-            # Updated prompt to enforce requested output format and ordering for readability
-            self.prompt = PromptTemplate(
-                input_variables=[
-                    "user_story",
-                    "acceptance_criteria",
-                    "domain_knowledge",
-                    "similar_examples",
-                    "criteria_list",
-                    "criteria_count",
-                    "previous_criteria",
-                ],
-                template="""
+        def _initialize_prompt_template(self):
+                """
+                Initialize the AI-only prompt template with HuggingFace context support
+                """
+                from langchain_core.prompts import PromptTemplate
+                if self.ai_mode == "ai":
+                        # Updated prompt to enforce requested output format and ordering for readability
+                        self.prompt = PromptTemplate(
+                                input_variables=[
+                                        "user_story",
+                                        "acceptance_criteria",
+                                        "domain_knowledge",
+                                        "similar_examples",
+                                        "criteria_list",
+                                        "criteria_count",
+                                        "previous_criteria",
+                                ],
+                                template="""
 You are a senior test engineer. Based on the user story and acceptance criteria, produce clear and readable test cases with the EXACT fields and order below:
 
 Fields per test case (no extra fields):
@@ -220,20 +220,20 @@ Now generate the test cases in this structure:
     2. <step>
 - Expected Result: <singular expected outcome>
 
- Do not include any other fields. Keep wording grounded in the given acceptance criteria.
+Do not include any other fields. Keep wording grounded in the given acceptance criteria.
 """
-            )
-            # Create runnable chain for AI mode
-            if self.llm:
-                self.chain = self.prompt | self.llm
-                logger.info("✅ Prompt template initialized with requested format and ordering")
-            else:
-                logger.error("❌ Cannot create chain: LLM not available")
-        else:
-            # AI mode failed - no prompt template in AI-only mode
-            logger.error("❌ AI-only mode: Cannot initialize prompt template without AI components")
-            self.prompt = None
-            self.chain = None
+                        )
+                        # Create runnable chain for AI mode
+                        if self.llm:
+                                self.chain = self.prompt | self.llm
+                                logger.info("✅ Prompt template initialized with requested format and ordering")
+                        else:
+                                logger.error("❌ Cannot create chain: LLM not available")
+                else:
+                        # AI mode failed - no prompt template in AI-only mode
+                        logger.error("❌ AI-only mode: Cannot initialize prompt template without AI components")
+                        self.prompt = None
+                        self.chain = None
 
     def _summarize_text(self, text: str) -> str:
         """
@@ -543,10 +543,10 @@ Now generate the test cases in this structure:
                         raise RuntimeError(f"AI-only mode: Test case generation failed after retries: {str(e)}")
             start_idx += len(chunk)
             previous_criteria.extend(chunk)
-    # Aggregate all outputs
-    combined = '\n\n'.join(all_outputs)
-    # Enforce structure and readability before returning
-    return self._enforce_output_structure(combined, ac_items)
+        # Aggregate all outputs
+        combined = '\n\n'.join(all_outputs)
+        # Enforce structure and readability before returning
+        return self._enforce_output_structure(combined, ac_items)
 
     def generate_test_cases_with_metadata(self, description: str, acceptance_criteria: str, use_knowledge: bool = True) -> Dict[str, Any]:
         """
