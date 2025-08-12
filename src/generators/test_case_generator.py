@@ -64,7 +64,7 @@ class TestCaseGenerator:
             if backend_path not in sys.path:
                 sys.path.append(backend_path)
             
-            from backend.vector_store import get_vector_store
+            from vector_store import get_vector_store
             self.vector_store = get_vector_store()
             
             # Try to load existing vector store
@@ -132,26 +132,26 @@ class TestCaseGenerator:
                 logger.error("🚫 AI-only mode requested - will not fallback to inferior methods")
                 logger.error("[SYSTEM] 🚫 AI-ONLY MODE: Refusing to use fallback methods")
 
-    # Removed _initialize_fallback_components method - AI-ONLY mode
+                # Removed _initialize_fallback_components method - AI-ONLY mode
 
-        def _initialize_prompt_template(self):
-                """
-                Initialize the AI-only prompt template with HuggingFace context support
-                """
-                from langchain_core.prompts import PromptTemplate
-                if self.ai_mode == "ai":
-                        # Updated prompt to enforce requested output format and ordering for readability
-                        self.prompt = PromptTemplate(
-                                input_variables=[
-                                        "user_story",
-                                        "acceptance_criteria",
-                                        "domain_knowledge",
-                                        "similar_examples",
-                                        "criteria_list",
-                                        "criteria_count",
-                                        "previous_criteria",
-                                ],
-                                template="""
+    def _initialize_prompt_template(self):
+        """
+        Initialize the AI-only prompt template with HuggingFace context support
+        """
+        from langchain_core.prompts import PromptTemplate
+        if self.ai_mode == "ai":
+            # Updated prompt to enforce requested output format and ordering for readability
+            self.prompt = PromptTemplate(
+                input_variables=[
+                    "user_story",
+                    "acceptance_criteria",
+                    "domain_knowledge",
+                    "similar_examples",
+                    "criteria_list",
+                    "criteria_count",
+                    "previous_criteria",
+                ],
+                template="""
 You are a senior test engineer. Based on the user story and acceptance criteria, produce clear and readable test cases with the EXACT fields and order below:
 
 Fields per test case (no extra fields):
@@ -222,18 +222,18 @@ Now generate the test cases in this structure:
 
 Do not include any other fields. Keep wording grounded in the given acceptance criteria.
 """
-                        )
-                        # Create runnable chain for AI mode
-                        if self.llm:
-                                self.chain = self.prompt | self.llm
-                                logger.info("✅ Prompt template initialized with requested format and ordering")
-                        else:
-                                logger.error("❌ Cannot create chain: LLM not available")
-                else:
-                        # AI mode failed - no prompt template in AI-only mode
-                        logger.error("❌ AI-only mode: Cannot initialize prompt template without AI components")
-                        self.prompt = None
-                        self.chain = None
+            )
+            # Create runnable chain for AI mode
+            if self.llm:
+                self.chain = self.prompt | self.llm
+                logger.info("✅ Prompt template initialized with requested format and ordering")
+            else:
+                logger.error("❌ Cannot create chain: LLM not available")
+        else:
+            # AI mode failed - no prompt template in AI-only mode
+            logger.error("❌ AI-only mode: Cannot initialize prompt template without AI components")
+            self.prompt = None
+            self.chain = None
 
     def _summarize_text(self, text: str) -> str:
         """
