@@ -64,7 +64,7 @@ class TestCaseGenerator:
             if backend_path not in sys.path:
                 sys.path.append(backend_path)
             
-            from vector_store import get_vector_store
+            from backend.vector_store import get_vector_store
             self.vector_store = get_vector_store()
             
             # Try to load existing vector store
@@ -97,7 +97,7 @@ class TestCaseGenerator:
                     
                     if not any('llama2' in model for model in available_models):
                         raise RuntimeError("llama2 model not found. Please run: ollama pull llama2")
-                    self.llm = OllamaLLM(model="llama2", base_url="http://localhost:11434", temperature=0.3)
+                    self.llm = OllamaLLM(model="llama2", base_url="http://localhost:11434", temperature=0.1)
                     
                     # Test LLM with a simple query
                     test_response = self.llm.invoke("Hello")
