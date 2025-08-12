@@ -22,6 +22,9 @@ faiss-cpu==1.11.0
 sentence-transformers>=2.2.0
 transformers>=4.21.0
 
+# NLP for smart acceptance criteria parsing
+spacy>=3.8.0
+
 # Basic scientific computing
 numpy>=1.24.0
 
@@ -30,7 +33,11 @@ numpy>=1.24.0
 # - Embeddings: HuggingFace (sentence-transformers)
 # - LLM: Ollama (llama2)
 # - Vector Store: FAISS
+# - NLP Parsing: spaCy (en_core_web_sm)
 # - All components run locally
 # - No external API calls
 # - No proprietary dependencies
 # ===================================
+
+# POST-INSTALL COMMANDS:
+# python -m spacy download en_core_web_sm

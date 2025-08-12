@@ -1,14 +1,15 @@
 import os
 import re
 import logging
-import platform
-import importlib
-import traceback
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+# Constants for prompt size management
+MAX_PROMPT_TOKENS = 2048  # Example, adjust to model's actual max
+SAFE_PROMPT_TOKENS = int(MAX_PROMPT_TOKENS * 0.75)
 
 class TestCaseGenerator:
     """
@@ -16,7 +17,7 @@ class TestCaseGenerator:
     Generate test cases from user stories and acceptance criteria using AI-first approach
     """
     
-    def __init__(self, retriever=None, llm=None, ai_only=True):
+    def __init__(self, retriever=None, llm=None, ai_only=True, model_name=None):
         """
         Initialize the enhanced test case generator with AI-ONLY approach
         
@@ -29,6 +30,7 @@ class TestCaseGenerator:
         self.ai_mode = "unknown"
         self.ai_only = ai_only
         self.initialization_error = None
+        self.model_name = model_name
         
         # AI-ONLY APPROACH: Initialize full AI stack or fail
         self._initialize_ai_components(llm)
@@ -95,8 +97,7 @@ class TestCaseGenerator:
                     
                     if not any('llama2' in model for model in available_models):
                         raise RuntimeError("llama2 model not found. Please run: ollama pull llama2")
-                    
-                    self.llm = OllamaLLM(model="llama2", base_url="http://localhost:11434")
+                    self.llm = OllamaLLM(model="llama2", base_url="http://localhost:11434", temperature=0.3)
                     
                     # Test LLM with a simple query
                     test_response = self.llm.invoke("Hello")
@@ -115,7 +116,7 @@ class TestCaseGenerator:
             # If we reach here, all AI components are operational
             self.ai_mode = "ai"
             self.initialization_error = None
-            print("[SYSTEM] 🚀 AI-ONLY MODE Ready")
+            logger.info("[SYSTEM] 🚀 AI-ONLY MODE Ready")
             
         except Exception as e:
             # AI initialization failed - store error for AI-only mode
@@ -125,11 +126,11 @@ class TestCaseGenerator:
             self.llm = None
             
             logger.error(f"❌ AI components initialization failed: {str(e)}")
-            print(f"[SYSTEM] ❌ AI INITIALIZATION FAILED: {str(e)}")
+            logger.error(f"[SYSTEM] ❌ AI INITIALIZATION FAILED: {str(e)}")
             
             if self.ai_only:
                 logger.error("🚫 AI-only mode requested - will not fallback to inferior methods")
-                print("[SYSTEM] 🚫 AI-ONLY MODE: Refusing to use fallback methods")
+                logger.error("[SYSTEM] 🚫 AI-ONLY MODE: Refusing to use fallback methods")
 
     # Removed _initialize_fallback_components method - AI-ONLY mode
 
@@ -140,41 +141,57 @@ class TestCaseGenerator:
         from langchain_core.prompts import PromptTemplate
         
         if self.ai_mode == "ai":
-            # AI-only prompt with HuggingFace embeddings context
+            # Improved prompt with explicit example, coverage, and format instructions
             self.prompt = PromptTemplate(
-                input_variables=["user_story", "acceptance_criteria", "domain_knowledge", "similar_examples"],
+                input_variables=["user_story", "acceptance_criteria", "domain_knowledge", "similar_examples", "criteria_list", "criteria_count", "previous_criteria"],
                 template="""
-You are an expert test engineer with deep domain knowledge. Given the following user story, acceptance criteria, and relevant context from HuggingFace semantic search, generate detailed, comprehensive test cases that ensure 100% coverage.
+You are a highly experienced test engineer with domain expertise. Given the user story and acceptance criteria below, generate detailed test cases that ensure complete coverage.
 
-CONTEXT FROM KNOWLEDGE BASE (via HuggingFace embeddings):
+Acceptance Criteria ({criteria_count} items):
+
+{criteria_list}
+
+If there are dependencies or shared context from previous criteria, consider them for cross-criterion coverage:
+Previous Criteria:
+{previous_criteria}
+
+For each acceptance criterion, generate:
+- At least one positive test case
+- At least one negative test case
+- At least one edge case
+
+Map each test case to its corresponding acceptance criterion number. For example:
+
+Test Case 1 (covers Acceptance Criterion 1):
+Title: ...
+Preconditions: ...
+Steps:
+  1. ...
+Expected Results:
+  - ...
+
+Test Case 2 (covers Acceptance Criterion 1, Negative Case):
+Title: ...
+Preconditions: ...
+Steps:
+  1. ...
+Expected Results:
+  - ...
+
+Test Case 3 (covers Acceptance Criterion 1, Edge Case):
+Title: ...
+Preconditions: ...
+Steps:
+  1. ...
+Expected Results:
+  - ...
+
+Return all output in markdown format, using numbered lists and headings for clarity. Do not include any fields other than Title, Preconditions, Steps, Expected Results.
+
+Here are some relevant domain knowledge and example test cases for context:
 {domain_knowledge}
 
-SIMILAR TEST CASE EXAMPLES (via semantic search):
 {similar_examples}
-
-USER STORY:
-{user_story}
-
-ACCEPTANCE CRITERIA:
-{acceptance_criteria}
-
-INSTRUCTIONS:
-- Generate comprehensive test cases covering all acceptance criteria
-- Each test case title must start with 'Verify' or 'Validate'
-- Use the domain knowledge and examples above to ensure context-appropriate test cases
-- Include both positive and negative test scenarios
-- For each test case, provide:
-  * Clear, descriptive title
-  * Numbered test steps
-  * Expected results
-  * Any relevant preconditions
-
-IMPORTANT:
-- Ensure EVERY acceptance criterion has corresponding test cases
-- Use specific details from the domain knowledge when relevant
-- Follow patterns from similar examples but adapt to current requirements
-- Include edge cases and error scenarios
-- Be specific, not generic
 
 Generate the test cases now:
 """
@@ -183,7 +200,7 @@ Generate the test cases now:
             # Create runnable chain for AI mode
             if self.llm:
                 self.chain = self.prompt | self.llm
-                logger.info("✅ AI-only prompt template initialized with HuggingFace context support")
+                logger.info("✅ Improved prompt template initialized with example and coverage instructions")
             else:
                 logger.error("❌ Cannot create chain: LLM not available")
         else:
@@ -191,6 +208,86 @@ Generate the test cases now:
             logger.error("❌ AI-only mode: Cannot initialize prompt template without AI components")
             self.prompt = None
             self.chain = None
+
+    def _summarize_text(self, text: str) -> str:
+        """
+        Simple rule-based summarization: condense long text to key sentences.
+        For production, replace with a proper summarizer.
+        """
+        # Take first 5 sentences as summary
+        sentences = re.split(r'(?<=[.!?]) +', text)
+        summary = ' '.join(sentences[:5])
+        return summary if summary else text[:500]
+
+    def _chunk_criteria(self, criteria: List[str], chunk_size: int = 5) -> List[List[str]]:
+        """
+        Split criteria into chunks for batch processing.
+        """
+        return [criteria[i:i+chunk_size] for i in range(0, len(criteria), chunk_size)]
+
+    def _prompt_length(self, prompt: str) -> int:
+        """
+        Estimate prompt length in tokens (simple word count for now).
+        """
+        return len(prompt.split())
+
+    def enumerate_criteria(self, ac_text, manual_override: list = None, use_nlp: bool = True):
+        """
+        Parse acceptance criteria into atomic requirements.
+        If manual_override is provided, use it directly.
+        If use_nlp is True, use spaCy for sentence segmentation and conjunction detection.
+        Otherwise, fallback to regex-based splitting.
+        """
+        if manual_override:
+            return manual_override
+        if use_nlp:
+            try:
+                import spacy
+                nlp = spacy.load("en_core_web_sm")
+                doc = nlp(ac_text)
+                items = []
+                for sent in doc.sents:
+                    # Only split on conjunctions if sentence is compound and both sides are complete clauses
+                    if any(tok.dep_ == "cc" for tok in sent):
+                        # Try to split only if both sides have a verb
+                        clauses = [clause.text.strip() for clause in sent._.clauses] if hasattr(sent, "_.clauses") else [sent.text.strip()]
+                        items.extend([cl for cl in clauses if cl])
+                    else:
+                        items.append(sent.text.strip())
+                # Remove empty items
+                return [item for item in items if item]
+            except Exception as e:
+                logger.warning(f"spaCy NLP parsing failed, falling back to regex: {str(e)}")
+        # Fallback: regex-based splitting
+        import re
+        items = []
+        numbered = re.split(r'\d+\.', ac_text)
+        if len(numbered) > 1:
+            if not numbered[0].strip():
+                numbered = numbered[1:]
+            items = [item.strip() for item in numbered if item.strip()]
+        else:
+            bullet_split = re.split(r'[\*\-•]', ac_text)
+            if len(bullet_split) > 1:
+                if not bullet_split[0].strip():
+                    bullet_split = bullet_split[1:]
+                items = [item.strip() for item in bullet_split if item.strip()]
+            else:
+                lines = [line.strip() for line in ac_text.split('\n') if line.strip()]
+                for line in lines:
+                    atomic = re.split(r'\band\b|\bor\b|;|\.', line)
+                    items.extend([a.strip() for a in atomic if a.strip()])
+        return items
+
+    def extract_test_cases(self, output):
+        """
+        Extract test cases from output using flexible regex.
+        Returns a list of test case blocks.
+        """
+        import re
+        # Flexible pattern: looks for 'Test Case', 'Title:', and 'Steps:' in proximity
+        pattern = re.compile(r'(Test Case \d+.*?Title:.*?Steps:.*?Expected Results:.*?)(?=Test Case \d+|$)', re.DOTALL | re.IGNORECASE)
+        return pattern.findall(output)
 
     def generate_test_cases(self, description: str, acceptance_criteria: str, use_knowledge: bool = True) -> str:
         """
@@ -220,7 +317,7 @@ Generate the test cases now:
         domain_knowledge = ""
         similar_examples = ""
 
-        if use_knowledge and self.vector_store:
+        if use_knowledge and hasattr(self, 'vector_store') and self.vector_store:
             try:
                 # Use FAISS vector store for semantic search with HuggingFace embeddings
                 query = f"{description}\n{acceptance_criteria}"
@@ -245,96 +342,72 @@ Generate the test cases now:
                         for doc in similar_docs
                     ])
 
-                print(f"[AI] 🤗 Using semantic search")
+                logger.info("[AI] 🤗 Using semantic search")
 
             except Exception as e:
                 logger.error(f"❌ FAISS vector store failed: {str(e)}")
                 # In AI-only mode, we don't fallback - we fail
                 raise RuntimeError(f"AI-only mode: FAISS vector store failed: {str(e)}")
 
-        # Parse acceptance criteria into a numbered list for clarity
-        def enumerate_criteria(ac_text):
-            import re
-            items = []
-            # Try to split by numbered items (1., 2., etc.)
-            numbered = re.split(r'\d+\.', ac_text)
-            if len(numbered) > 1:
-                if not numbered[0].strip():
-                    numbered = numbered[1:]
-                items = [item.strip() for item in numbered if item.strip()]
-            else:
-                bullet_split = re.split(r'[\*\-•]', ac_text)
-                if len(bullet_split) > 1:
-                    if not bullet_split[0].strip():
-                        bullet_split = bullet_split[1:]
-                    items = [item.strip() for item in bullet_split if item.strip()]
-                else:
-                    items = [line.strip() for line in ac_text.split('\n') if line.strip()]
-            return items
+        ac_items = self.enumerate_criteria(acceptance_criteria)
+        criteria_list = '\n'.join([f"{i+1}. {item}" for i, item in enumerate(ac_items)])
 
-        # (Removed duplicate block)
+        # Enrich domain_knowledge and similar_examples from vector store if available
+        domain_knowledge = ""
+        similar_examples = ""
+        if use_knowledge and hasattr(self, 'vector_store') and self.vector_store:
+            try:
+                query = f"{description}\n{acceptance_criteria}"
+                domain_context = self.vector_store.get_relevant_context(query=query, max_tokens=1000)
+                similar_docs = self.vector_store.similarity_search(query=f"test cases examples for {description}", k=3)
+                domain_knowledge = domain_context if domain_context != "No relevant context found." else ""
+                if similar_docs:
+                    similar_examples = "\n---\n".join([
+                        f"Example from {doc.metadata.get('filename', 'knowledge base')}:\n{doc.page_content[:500]}..."
+                        for doc in similar_docs
+                    ])
+            except Exception as e:
+                logger.error(f"❌ FAISS vector store failed: {str(e)}")
+                raise RuntimeError(f"AI-only mode: FAISS vector store failed: {str(e)}")
 
-        print(f"[AI] 🚀 Generating test cases")
-
-        # Parse acceptance criteria for validation
-        def enumerate_criteria(ac_text):
-            import re
-            items = []
-            # Try to split by numbered items (1., 2., etc.)
-            numbered = re.split(r'\d+\.', ac_text)
-            if len(numbered) > 1:
-                if not numbered[0].strip():
-                    numbered = numbered[1:]
-                items = [item.strip() for item in numbered if item.strip()]
-            else:
-                bullet_split = re.split(r'[\*\-•]', ac_text)
-                if len(bullet_split) > 1:
-                    if not bullet_split[0].strip():
-                        bullet_split = bullet_split[1:]
-                    items = [item.strip() for item in bullet_split if item.strip()]
-                else:
-                    items = [line.strip() for line in ac_text.split('\n') if line.strip()]
-            return items
-
-        ac_items = enumerate_criteria(acceptance_criteria)
-
-        # Create the prompt input for AI mode
-        prompt_input = {
-            "user_story": description,
-            "acceptance_criteria": acceptance_criteria,
-            "domain_knowledge": domain_knowledge,
-            "similar_examples": similar_examples
-        }
-
-        # Generate test cases using AI-only approach
-        try:
-            result = self.chain.invoke(prompt_input)
-            if isinstance(result, dict) and 'content' in result:
-                output = result['content']
-            else:
-                output = str(result)
-
-            # Post-processing: check number of test cases matches number of criteria
-            # Simple heuristic: count lines starting with '1.', '2.', etc. or 'Test Case 1:', etc.
-            num_criteria = len(ac_items)
-            import re
-            # Try to count test case sections
-            tc_pattern = re.compile(r'^(?:\d+\.|Test Case \d+:)', re.MULTILINE)
-            matches = tc_pattern.findall(output)
-            num_test_cases = len(matches)
-
-            if num_test_cases < num_criteria:
-                logger.warning(f"⚠️ Only {num_test_cases} test cases generated for {num_criteria} acceptance criteria. Output may be incomplete.")
-                output += f"\n\n[WARNING] Only {num_test_cases} test cases generated for {num_criteria} acceptance criteria. Please review and regenerate if needed."
-
-            return output
-
-        except Exception as e:
-            logger.error(f"❌ AI test case generation failed: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise RuntimeError(f"AI-only mode: Test case generation failed: {str(e)}")
-
-        # (Removed duplicate block)
+        all_outputs = []
+        chunked_criteria = self._chunk_criteria(ac_items, chunk_size=5)
+        start_idx = 0
+        previous_criteria = []
+        for chunk in chunked_criteria:
+            chunk_list = '\n'.join([f"{i+1+start_idx}. {item}" for i, item in enumerate(chunk)])
+            # Context bridging: pass previous criteria as context
+            context_bridge = '\n'.join([f"{i+1}. {item}" for i, item in enumerate(previous_criteria)]) if previous_criteria else "None"
+            prompt_input = {
+                "user_story": description,
+                "acceptance_criteria": '\n'.join(chunk),
+                "domain_knowledge": domain_knowledge,
+                "similar_examples": similar_examples,
+                "criteria_list": chunk_list,
+                "criteria_count": len(chunk),
+                "previous_criteria": context_bridge
+            }
+            prompt_str = str(prompt_input)
+            if self._prompt_length(prompt_str) > SAFE_PROMPT_TOKENS:
+                logger.info("Prompt too long, but not summarizing. Using full input.")
+            # Retry logic for LLM invocation
+            for attempt in range(3):
+                try:
+                    result = self.chain.invoke(prompt_input)
+                    if isinstance(result, dict) and 'content' in result:
+                        output = result['content']
+                    else:
+                        output = str(result)
+                    all_outputs.append(output)
+                    break
+                except Exception as e:
+                    logger.error(f"LLM invocation failed (attempt {attempt+1}): {str(e)}")
+                    if attempt == 2:
+                        raise RuntimeError(f"AI-only mode: Test case generation failed after retries: {str(e)}")
+            start_idx += len(chunk)
+            previous_criteria.extend(chunk)
+        # Aggregate all outputs
+        return '\n\n'.join(all_outputs)
 
     def generate_test_cases_with_metadata(self, description: str, acceptance_criteria: str, use_knowledge: bool = True) -> Dict[str, Any]:
         """
