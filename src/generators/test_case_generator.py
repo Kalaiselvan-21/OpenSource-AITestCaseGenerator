@@ -58,13 +58,12 @@ class TestCaseGenerator:
             # Step 1: Initialize and verify FAISS vector store
             logger.info("🔍 Initializing FAISS vector store...")
             
-            # Import vector store from backend directory
+            # Import vector store from backend package (ensure project root is on sys.path)
             import sys
-            backend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'backend')
-            if backend_path not in sys.path:
-                sys.path.append(backend_path)
-            
-            from vector_store import get_vector_store
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            if project_root not in sys.path:
+                sys.path.append(project_root)
+            from backend.vector_store import get_vector_store
             self.vector_store = get_vector_store()
             
             # Try to load existing vector store
@@ -180,45 +179,39 @@ Additional domain knowledge and example references (use for context only, do not
 
 {similar_examples}
 
-Now generate the test cases in this structure:
+Now generate the test cases in this structure (follow EXACT casing and labels; no leading dashes on labels):
 
 ## Positive Test Cases
 
-### AC <number>
-- Acceptance Criteria: <paste the AC text>
-- Test case Title: <concise, outcome-focused title>
-- Steps:
+Acceptance Criteria: <paste the AC text>
+Test case Title: Verify <concise, outcome-focused title>
+Steps:
     1. <step>
     2. <step>
-- Expected Result: <singular expected outcome>
+Expected Result: <singular expected outcome>
 
-### AC <number>
-- Acceptance Criteria: <paste the AC text>
-- Test case Title: <concise, outcome-focused title>
-- Steps:
+Acceptance Criteria: <paste the AC text>
+Test case Title: Verify <concise, outcome-focused title>
+Steps:
     1. <step>
     2. <step>
-- Expected Result: <singular expected outcome>
+Expected Result: <singular expected outcome>
 
 ...repeat until all ACs have at least one Positive test case…
 
-## Negative Test Cases
+## Negative Test Cases (Do not include the Acceptance Criteria line in this section)
 
-### AC <number>
-- Acceptance Criteria: <paste the AC text>
-- Test case Title: <concise, failure-mode-focused title>
-- Steps:
+Test case Title: Validate <concise, failure-mode-focused title>
+Steps:
     1. <step>
     2. <step>
-- Expected Result: <singular expected outcome>
+Expected Result: <singular expected outcome>
 
-### AC <number>
-- Acceptance Criteria: <paste the AC text>
-- Test case Title: <concise, failure-mode-focused title>
-- Steps:
+Test case Title: Validate <concise, failure-mode-focused title>
+Steps:
     1. <step>
     2. <step>
-- Expected Result: <singular expected outcome>
+Expected Result: <singular expected outcome>
 
 Do not include any other fields. Keep wording grounded in the given acceptance criteria.
 """
@@ -328,88 +321,151 @@ Do not include any other fields. Keep wording grounded in the given acceptance c
             cases = {"positive": [], "negative": []}
             section = None
             current = None
+            # Track implicit AC index when headings are absent
+            implicit_ac_index = {"positive": 0, "negative": 0}
+
+            def is_meaningful(entry: dict) -> bool:
+                """A parsed test case is meaningful if it has any substantive field."""
+                if not entry:
+                    return False
+                has_title = bool((entry.get("title") or "").strip())
+                has_steps = bool(entry.get("steps"))
+                has_expected = bool((entry.get("expected") or "").strip())
+                has_ac_text = bool((entry.get("ac_text") or "").strip())
+                # For Negative section, require steps or expected (avoid empty shells)
+                # For Positive, allow AC text-only to be formatted, but prefer some content
+                return has_steps or has_expected or has_title or has_ac_text
             lines = text.splitlines()
             i = 0
             while i < len(lines):
                 line = lines[i].strip()
                 low = line.lower()
-                if re.match(r"^##\s*positive\s*test\s*cases\s*$", low, flags=re.IGNORECASE):
+                # Section headers
+                if re.match(r"^##\s*positive\s*test\s*cases.*$", low, flags=re.IGNORECASE):
                     section = "positive"
+                    # Push any meaningful current before switching
+                    if current and is_meaningful(current):
+                        cases[section].append(current)
                     current = None
                     i += 1
                     continue
-                if re.match(r"^##\s*negative\s*test\s*cases\s*$", low, flags=re.IGNORECASE):
+                if re.match(r"^##\s*negative\s*test\s*cases.*$", low, flags=re.IGNORECASE):
                     section = "negative"
+                    # Push any meaningful current before switching
+                    if current and is_meaningful(current):
+                        cases[section].append(current)
                     current = None
                     i += 1
                     continue
-                m = re.match(r"^###\s*AC\s*(\d+).*", line, flags=re.IGNORECASE)
+                # AC heading (optional)
+                m = re.match(r"^###\s*AC\s*(\d+)\b.*$", line, flags=re.IGNORECASE)
                 if m and section in ("positive", "negative"):
-                    # push previous
-                    if current:
+                    if current and is_meaningful(current):
                         cases[section].append(current)
                     ac_num = int(m.group(1))
                     current = {"ac": ac_num, "ac_text": None, "title": None, "steps": [], "expected": None}
+                    # Reset implicit index tracker to align with explicit AC
+                    implicit_ac_index[section] = ac_num
                     i += 1
                     continue
+                # If within a section but no current test started, start one implicitly by AC order
+                if section in ("positive", "negative") and current is None:
+                    implicit_ac_index[section] += 1
+                    ac_num = implicit_ac_index[section]
+                    current = {"ac": ac_num, "ac_text": None, "title": None, "steps": [], "expected": None}
+                    # do not continue; fall through to parse fields of this line if any
+                # Fields for current test case
                 if current is not None:
-                    # Field bullets
-                    if low.startswith("- acceptance criteria:"):
+                    if re.match(r"^-?\s*acceptance\s*criteria:", low):
                         current["ac_text"] = line.split(":", 1)[1].strip()
                         i += 1
                         continue
-                    if low.startswith("- test case title:") or low.startswith("- testcase title:"):
+                    if re.match(r"^-?\s*test\s*case\s*title:", low) or re.match(r"^-?\s*testcase\s*title:", low):
                         current["title"] = line.split(":", 1)[1].strip()
                         i += 1
                         continue
-                    if low.startswith("- steps:"):
-                        # collect subsequent numbered or dashed lines
+                    if re.match(r"^-?\s*steps:", low):
                         i += 1
                         while i < len(lines):
                             step_line = lines[i]
                             step_stripped = step_line.strip()
-                            if re.match(r"^(###|##)\s*", step_stripped) or step_stripped.lower().startswith("- expected result:") or step_stripped.lower().startswith("- acceptance criteria:") or step_stripped.lower().startswith("- test case title:"):
+                            low_step = step_stripped.lower()
+                            if re.match(r"^(###|##)\s*", step_stripped) or re.match(r"^-?\s*expected\s*result:", low_step) or re.match(r"^-?\s*acceptance\s*criteria:", low_step) or re.match(r"^-?\s*test\s*case\s*title:", low_step) or re.match(r"^-?\s*testcase\s*title:", low_step):
                                 break
-                            if re.match(r"^\d+\.|^- ", step_stripped):
-                                # remove leading bullet/number
-                                step_val = re.sub(r"^(\d+\.|-\s+)", "", step_stripped).strip()
+                            if re.match(r"^\s*\d+\.\s*", step_stripped) or re.match(r"^\s*-\s+", step_stripped):
+                                step_val = re.sub(r"^\s*(\d+\.\s*|-\s+)", "", step_stripped).strip()
                                 if step_val:
                                     current["steps"].append(step_val)
                             i += 1
                         continue
-                    if low.startswith("- expected result:"):
+                    if re.match(r"^-?\s*expected\s*result:", low):
                         current["expected"] = line.split(":", 1)[1].strip()
+                        # Once expected is parsed, we can finalize this test case and allow next implicit AC
+                        if is_meaningful(current):
+                            cases[section].append(current)
+                        current = None
                         i += 1
                         continue
                 i += 1
-            # push last
-            if current and section in ("positive", "negative"):
+            # push last if not already pushed
+            if current and section in ("positive", "negative") and is_meaningful(current):
                 cases[section].append(current)
-            # sort by ac
             for k in ("positive", "negative"):
                 cases[k].sort(key=lambda x: x.get("ac", 0))
             return cases
 
         def format_md(cases):
+            # Ensure coverage for all ACs by inserting placeholders for missing ones
+            def ensure_all_acs(section_key):
+                # Do not insert placeholders for any section; only output meaningful parsed cases
+                return
+
+            ensure_all_acs("positive")
+
+            def normalize_title(title, is_positive):
+                if not title:
+                    return ("Verify" if is_positive else "Validate") + " scenario behaves as expected"
+                t = title.strip()
+                # Enforce prefix
+                if is_positive and not t.lower().startswith("verify"):
+                    t = "Verify " + t
+                if not is_positive and not t.lower().startswith("validate"):
+                    t = "Validate " + t
+                # Keep concise (approx 10-12 words)
+                words = t.split()
+                if len(words) > 12:
+                    t = " ".join(words[:12]) + "…"
+                return t
+
             def render_section(name):
                 buf = [f"## {name} Test Cases"]
                 entries = cases["positive" if name == "Positive" else "negative"]
-                for entry in entries:
+                is_positive = (name == "Positive")
+                for e_idx, entry in enumerate(entries):
                     ac_num = entry.get("ac")
                     ac_text = entry.get("ac_text") or (ac_items[ac_num-1] if isinstance(ac_num, int) and 0 < ac_num <= len(ac_items) else None)
-                    title = entry.get("title") or (f"{name} - AC {ac_num}")
+                    title = normalize_title(entry.get("title"), is_positive)
                     steps = entry.get("steps") or []
                     expected = entry.get("expected") or ""
-                    buf.append(f"\n### AC {ac_num}")
-                    buf.append(f"- Acceptance Criteria: {ac_text or ''}")
-                    buf.append(f"- Test case Title: {title}")
-                    buf.append(f"- Steps:")
+                    # Skip emitting empty shells (no steps and no expected)
+                    if not steps and not expected:
+                        # If Positive has AC text only and nothing else, still skip to avoid noise
+                        continue
+                    # No AC heading output; only include Acceptance Criteria line for Positive
+                    if is_positive:
+                        buf.append(f"Acceptance Criteria: {ac_text or ''}")
+                    buf.append(f"Test case Title: {title}")
+                    buf.append("Steps:")
                     if steps:
                         for idx, s in enumerate(steps, 1):
                             buf.append(f"  {idx}. {s}")
                     else:
+                        # Avoid printing a blank numbered step
                         buf.append("  1. ")
-                    buf.append(f"- Expected Result: {expected}")
+                    buf.append(f"Expected Result: {expected}")
+                    # Insert a single blank line between test cases (but not after the last one)
+                    if e_idx < len(entries) - 1:
+                        buf.append("")
                 return "\n".join(buf)
 
             # build final markdown
