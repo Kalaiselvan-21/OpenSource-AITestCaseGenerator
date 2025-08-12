@@ -139,68 +139,94 @@ class TestCaseGenerator:
         Initialize the AI-only prompt template with HuggingFace context support
         """
         from langchain_core.prompts import PromptTemplate
-        
         if self.ai_mode == "ai":
-            # Improved prompt with explicit example, coverage, and format instructions
+            # Updated prompt to enforce requested output format and ordering for readability
             self.prompt = PromptTemplate(
-                input_variables=["user_story", "acceptance_criteria", "domain_knowledge", "similar_examples", "criteria_list", "criteria_count", "previous_criteria"],
+                input_variables=[
+                    "user_story",
+                    "acceptance_criteria",
+                    "domain_knowledge",
+                    "similar_examples",
+                    "criteria_list",
+                    "criteria_count",
+                    "previous_criteria",
+                ],
                 template="""
-You are a highly experienced test engineer with domain expertise. Given the user story and acceptance criteria below, generate detailed test cases that ensure complete coverage.
+You are a senior test engineer. Based on the user story and acceptance criteria, produce clear and readable test cases with the EXACT fields and order below:
 
-Acceptance Criteria ({criteria_count} items):
+Fields per test case (no extra fields):
+- Acceptance Criteria
+- Test case Title
+- Steps
+- Expected Result
+
+Important formatting and ordering rules:
+- Output must be in Markdown.
+- First, provide ALL Positive test cases for ALL acceptance criteria.
+- Then, after finishing positives, provide ALL Negative test cases for ALL acceptance criteria.
+- Group by Acceptance Criterion inside each section and ensure complete coverage.
+- Use concise, numbered Steps for clarity.
+- Keep Expected Result singular and specific.
+
+Acceptance Criteria to cover ({criteria_count} items):
 
 {criteria_list}
 
-If there are dependencies or shared context from previous criteria, consider them for cross-criterion coverage:
-Previous Criteria:
+Context from previous criteria (for cross-criterion awareness):
 {previous_criteria}
 
-For each acceptance criterion, generate:
-- At least one positive test case
-- At least one negative test case
-- At least one edge case
-
-Map each test case to its corresponding acceptance criterion number. For example:
-
-Test Case 1 (covers Acceptance Criterion 1):
-Title: ...
-Preconditions: ...
-Steps:
-  1. ...
-Expected Results:
-  - ...
-
-Test Case 2 (covers Acceptance Criterion 1, Negative Case):
-Title: ...
-Preconditions: ...
-Steps:
-  1. ...
-Expected Results:
-  - ...
-
-Test Case 3 (covers Acceptance Criterion 1, Edge Case):
-Title: ...
-Preconditions: ...
-Steps:
-  1. ...
-Expected Results:
-  - ...
-
-Return all output in markdown format, using numbered lists and headings for clarity. Do not include any fields other than Title, Preconditions, Steps, Expected Results.
-
-Here are some relevant domain knowledge and example test cases for context:
+Additional domain knowledge and example references (use for context only, do not copy verbatim):
 {domain_knowledge}
 
 {similar_examples}
 
-Generate the test cases now:
+Now generate the test cases in this structure:
+
+## Positive Test Cases
+
+### AC <number>
+- Acceptance Criteria: <paste the AC text>
+- Test case Title: <concise, outcome-focused title>
+- Steps:
+    1. <step>
+    2. <step>
+- Expected Result: <singular expected outcome>
+
+### AC <number>
+- Acceptance Criteria: <paste the AC text>
+- Test case Title: <concise, outcome-focused title>
+- Steps:
+    1. <step>
+    2. <step>
+- Expected Result: <singular expected outcome>
+
+...repeat until all ACs have at least one Positive test case…
+
+## Negative Test Cases
+
+### AC <number>
+- Acceptance Criteria: <paste the AC text>
+- Test case Title: <concise, failure-mode-focused title>
+- Steps:
+    1. <step>
+    2. <step>
+- Expected Result: <singular expected outcome>
+
+### AC <number>
+- Acceptance Criteria: <paste the AC text>
+- Test case Title: <concise, failure-mode-focused title>
+- Steps:
+    1. <step>
+    2. <step>
+- Expected Result: <singular expected outcome>
+
+ Do not include any other fields. Keep wording grounded in the given acceptance criteria.
 """
             )
-            
             # Create runnable chain for AI mode
             if self.llm:
                 self.chain = self.prompt | self.llm
-                logger.info("✅ Improved prompt template initialized with example and coverage instructions")
+                logger.info("✅ Prompt template initialized with requested format and ordering")
             else:
                 logger.error("❌ Cannot create chain: LLM not available")
         else:
@@ -288,6 +314,117 @@ Generate the test cases now:
         # Flexible pattern: looks for 'Test Case', 'Title:', and 'Steps:' in proximity
         pattern = re.compile(r'(Test Case \d+.*?Title:.*?Steps:.*?Expected Results:.*?)(?=Test Case \d+|$)', re.DOTALL | re.IGNORECASE)
         return pattern.findall(output)
+
+    def _enforce_output_structure(self, raw_text: str, ac_items: List[str]) -> str:
+        """
+        Enforce the requested output structure:
+        - Positive test cases for all ACs first, then Negative test cases
+        - Fields: Acceptance Criteria, Test case Title, Steps, Expected Result
+        Returns formatted Markdown if parsing succeeds; otherwise returns raw_text.
+        """
+        import re
+
+        def parse(text):
+            cases = {"positive": [], "negative": []}
+            section = None
+            current = None
+            lines = text.splitlines()
+            i = 0
+            while i < len(lines):
+                line = lines[i].strip()
+                low = line.lower()
+                if re.match(r"^##\s*positive\s*test\s*cases\s*$", low, flags=re.IGNORECASE):
+                    section = "positive"
+                    current = None
+                    i += 1
+                    continue
+                if re.match(r"^##\s*negative\s*test\s*cases\s*$", low, flags=re.IGNORECASE):
+                    section = "negative"
+                    current = None
+                    i += 1
+                    continue
+                m = re.match(r"^###\s*AC\s*(\d+).*", line, flags=re.IGNORECASE)
+                if m and section in ("positive", "negative"):
+                    # push previous
+                    if current:
+                        cases[section].append(current)
+                    ac_num = int(m.group(1))
+                    current = {"ac": ac_num, "ac_text": None, "title": None, "steps": [], "expected": None}
+                    i += 1
+                    continue
+                if current is not None:
+                    # Field bullets
+                    if low.startswith("- acceptance criteria:"):
+                        current["ac_text"] = line.split(":", 1)[1].strip()
+                        i += 1
+                        continue
+                    if low.startswith("- test case title:") or low.startswith("- testcase title:"):
+                        current["title"] = line.split(":", 1)[1].strip()
+                        i += 1
+                        continue
+                    if low.startswith("- steps:"):
+                        # collect subsequent numbered or dashed lines
+                        i += 1
+                        while i < len(lines):
+                            step_line = lines[i]
+                            step_stripped = step_line.strip()
+                            if re.match(r"^(###|##)\s*", step_stripped) or step_stripped.lower().startswith("- expected result:") or step_stripped.lower().startswith("- acceptance criteria:") or step_stripped.lower().startswith("- test case title:"):
+                                break
+                            if re.match(r"^\d+\.|^- ", step_stripped):
+                                # remove leading bullet/number
+                                step_val = re.sub(r"^(\d+\.|-\s+)", "", step_stripped).strip()
+                                if step_val:
+                                    current["steps"].append(step_val)
+                            i += 1
+                        continue
+                    if low.startswith("- expected result:"):
+                        current["expected"] = line.split(":", 1)[1].strip()
+                        i += 1
+                        continue
+                i += 1
+            # push last
+            if current and section in ("positive", "negative"):
+                cases[section].append(current)
+            # sort by ac
+            for k in ("positive", "negative"):
+                cases[k].sort(key=lambda x: x.get("ac", 0))
+            return cases
+
+        def format_md(cases):
+            def render_section(name):
+                buf = [f"## {name} Test Cases"]
+                entries = cases["positive" if name == "Positive" else "negative"]
+                for entry in entries:
+                    ac_num = entry.get("ac")
+                    ac_text = entry.get("ac_text") or (ac_items[ac_num-1] if isinstance(ac_num, int) and 0 < ac_num <= len(ac_items) else None)
+                    title = entry.get("title") or (f"{name} - AC {ac_num}")
+                    steps = entry.get("steps") or []
+                    expected = entry.get("expected") or ""
+                    buf.append(f"\n### AC {ac_num}")
+                    buf.append(f"- Acceptance Criteria: {ac_text or ''}")
+                    buf.append(f"- Test case Title: {title}")
+                    buf.append(f"- Steps:")
+                    if steps:
+                        for idx, s in enumerate(steps, 1):
+                            buf.append(f"  {idx}. {s}")
+                    else:
+                        buf.append("  1. ")
+                    buf.append(f"- Expected Result: {expected}")
+                return "\n".join(buf)
+
+            # build final markdown
+            pos = render_section("Positive")
+            neg = render_section("Negative")
+            return f"{pos}\n\n{neg}"
+
+        try:
+            cases = parse(raw_text)
+            # If nothing parsed, return raw
+            if not cases["positive"] and not cases["negative"]:
+                return raw_text
+            return format_md(cases)
+        except Exception:
+            return raw_text
 
     def generate_test_cases(self, description: str, acceptance_criteria: str, use_knowledge: bool = True) -> str:
         """
@@ -406,8 +543,10 @@ Generate the test cases now:
                         raise RuntimeError(f"AI-only mode: Test case generation failed after retries: {str(e)}")
             start_idx += len(chunk)
             previous_criteria.extend(chunk)
-        # Aggregate all outputs
-        return '\n\n'.join(all_outputs)
+    # Aggregate all outputs
+    combined = '\n\n'.join(all_outputs)
+    # Enforce structure and readability before returning
+    return self._enforce_output_structure(combined, ac_items)
 
     def generate_test_cases_with_metadata(self, description: str, acceptance_criteria: str, use_knowledge: bool = True) -> Dict[str, Any]:
         """
