@@ -17,7 +17,7 @@ class TestCaseGenerator:
     Generate test cases from user stories and acceptance criteria using AI-first approach
     """
     
-    def __init__(self, retriever=None, llm=None, ai_only=True, model_name=None):
+    def __init__(self, retriever=None, llm=None, ai_only=True, model_name=None, project_name: str = None, project_id: str = None):
         """
         Initialize the enhanced test case generator with AI-ONLY approach
         
@@ -25,16 +25,22 @@ class TestCaseGenerator:
             retriever: Retriever for similar test cases (deprecated)
             llm: Language model for test case generation
             ai_only: If True (default), only use AI components, fail if not available
+            project_name: Optional project name to select per-project vector store
+            project_id: Deprecated alias for project_name (kept for backward compatibility)
         """
         self.retriever = retriever
         self.ai_mode = "unknown"
         self.ai_only = ai_only
         self.initialization_error = None
         self.model_name = model_name
-        
+        # Normalize project identifier
+        self.project_name = project_name or project_id
+        # Back-compat attribute
+        self.project_id = self.project_name
+
         # AI-ONLY APPROACH: Initialize full AI stack or fail
         self._initialize_ai_components(llm)
-        
+
         # Only initialize fallback if explicitly requested (ai_only=False)
         if not self.ai_only and self.ai_mode != "ai":
             self._initialize_fallback_components()
@@ -43,10 +49,10 @@ class TestCaseGenerator:
             error_msg = f"AI-only mode requested but AI components failed: {self.initialization_error}"
             logger.error(f"❌ {error_msg}")
             raise RuntimeError(error_msg)
-        
+
         # Initialize prompt template
         self._initialize_prompt_template()
-        
+
         logger.info(f"🚀 Enhanced Test Case Generator initialized in {self.ai_mode.upper()} mode (AI-only: {self.ai_only})")
 
     def _initialize_ai_components(self, provided_llm=None):
@@ -64,7 +70,8 @@ class TestCaseGenerator:
             if project_root not in sys.path:
                 sys.path.append(project_root)
             from backend.vector_store import get_vector_store
-            self.vector_store = get_vector_store()
+            # Vector store API expects project_name; we pass normalized self.project_name
+            self.vector_store = get_vector_store(project_name=self.project_name)
             
             # Try to load existing vector store
             if not self.vector_store.load_vector_store():

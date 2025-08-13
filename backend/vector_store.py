@@ -333,43 +333,60 @@ class TestCaseVectorStore:
             logger.error(f"Error getting relevant context: {str(e)}")
             return "Error retrieving context."
 
-# Global vector store instance
-_vector_store_instance = None
+# Global vector store instances keyed by project_id (None = default)
+_vector_store_instances: Dict[Optional[str], TestCaseVectorStore] = {}
 
-def get_vector_store() -> TestCaseVectorStore:
+def _paths_for_project(project_name: Optional[str]) -> Dict[str, str]:
+    """Return knowledge and index paths for a project name (relative to backend)."""
+    if project_name and str(project_name).strip():
+        return {
+            "knowledge_base_path": os.path.join("./knowledge_base", str(project_name)),
+            "vector_store_path": os.path.join("./vector_store", str(project_name)),
+        }
+    return {
+        "knowledge_base_path": "./knowledge_base",
+        "vector_store_path": "./vector_store",
+    }
+
+def get_vector_store(project_name: Optional[str] = None) -> TestCaseVectorStore:
     """
-    Get or create the global vector store instance
-    
+    Get or create a vector store instance for the given project.
+
+    Args:
+        project_name: Optional project identifier to isolate knowledge per project.
+
     Returns:
-        TestCaseVectorStore instance
+        TestCaseVectorStore instance for that project.
     """
-    global _vector_store_instance
-    
-    if _vector_store_instance is None:
-        _vector_store_instance = TestCaseVectorStore()
-    
-    return _vector_store_instance
+    global _vector_store_instances
+    if project_name not in _vector_store_instances:
+        paths = _paths_for_project(project_name)
+        _vector_store_instances[project_name] = TestCaseVectorStore(
+            knowledge_base_path=paths["knowledge_base_path"],
+            vector_store_path=paths["vector_store_path"],
+        )
+    return _vector_store_instances[project_name]
 
-def initialize_vector_store() -> bool:
+def initialize_vector_store(project_name: Optional[str] = None) -> bool:
     """
-    Initialize the vector store (load existing or create new)
-    
+    Initialize the vector store for a project (load existing or create new)
+
+    Args:
+        project_name: Optional project identifier
+
     Returns:
         True if initialization successful, False otherwise
     """
     try:
-        vs = get_vector_store()
-        
+        vs = get_vector_store(project_name)
         # Try to load existing vector store first
         if vs.load_vector_store():
             return True
-        
         # Create new vector store if loading failed
         if vs.create_vector_store():
             return True
         else:
             return False
-            
     except Exception as e:
-        logger.error(f"Vector store initialization failed: {str(e)}")
+        logger.error(f"Vector store initialization failed for project '{project_name}': {str(e)}")
         return False

@@ -253,4 +253,6 @@ yarn-error.log*
 backend/knowledge_base/test_case_examples/test_case_examples.txt
 backend/knowledge_base/test_case_examples/test_cases_UCR.txt
 backend/knowledge_base/overall_functionality.txt
+backend/knowledge_base/eform.txt
+backend/knowledge_base/ucr.txt
 sample_knowledge.txt

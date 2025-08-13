@@ -15,11 +15,11 @@ CORS(app)
 # Initialize token counter
 token_counter = TokenCounter()
 
-# Initialize FAISS vector store on startup
+# Initialize default FAISS vector store on startup (project-agnostic)
 print("[STARTUP] 🚀 AI Test Case Generator - AI-ONLY Mode")
 try:
     from vector_store import initialize_vector_store
-    vector_store_initialized = initialize_vector_store()
+    vector_store_initialized = initialize_vector_store(project_name=None)
     if vector_store_initialized:
         print("[STARTUP] ✅ FAISS vector store ready")
     else:
@@ -262,163 +262,150 @@ def health_check():
 def generate_test_cases():
     """
     Enhanced endpoint to generate test cases using LLM models with knowledge base integration,
-    vector database retrieval, and best practices incorporation.
+    and support optional project_name for per-project vector store isolation.
     """
     try:
-        data = request.json
-        
-        # Validate required fields
+        data = request.get_json(silent=True) or {}
         if not data:
             return jsonify({"error": "No data provided"}), 400
-            
-        # Extract only required fields, making summary optional
-        description = data.get('description', '')
-        acceptance_criteria = data.get('acceptance_criteria', '')
-        use_knowledge = data.get('use_knowledge', True)
-        use_retrieval = data.get('use_retrieval', True)
-        
-        # Extract summary from description if not provided
-        summary = data.get('summary', '')
+
+        description = data.get('description') or ''
+        acceptance_criteria = data.get('acceptance_criteria') or ''
+        use_knowledge = bool(data.get('use_knowledge', True))
+        use_retrieval = bool(data.get('use_retrieval', True))
+        project_name = (data.get('project_name') or '').strip() or None
+
+        # Optional summary derivation
+        summary = data.get('summary') or ''
         if not summary and description:
-            # Try to extract a summary from the first line or sentence of the description
-            summary_lines = description.split('\n')
-            summary = summary_lines[0][:50] + ('...' if len(summary_lines[0]) > 50 else '')
-        
-        # Simplified validation - only check if both fields exist
+            first_line = description.split('\n', 1)[0]
+            summary = first_line[:50] + ('...' if len(first_line) > 50 else '')
+
         if not description or not acceptance_criteria:
-            return jsonify({"error": f"Missing required fields: description and acceptance_criteria. Received: description={bool(description)}, acceptance_criteria={bool(acceptance_criteria)}"}), 400
-        
-        # Log token usage for the request
+            return jsonify({
+                "error": (
+                    "Missing required fields: description and acceptance_criteria. "
+                    f"Received: description={bool(description)}, acceptance_criteria={bool(acceptance_criteria)}"
+                )
+            }), 400
+
+        # Validate project_name format if provided
+        if project_name:
+            import re
+            if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
+                return jsonify({"error": "Invalid project_name. Use only alphanumeric characters, underscores, and hyphens."}), 400
+
         prompt_text = f"Description: {description}\n\nAcceptance Criteria: {acceptance_criteria}"
-        
-        # Use the Enhanced Original TestCaseGenerator with FAISS integration
+
+        # Ensure project root is on sys.path
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from src.generators.test_case_generator import TestCaseGenerator
+        from src.generators.post_processor import post_process_test_cases
+
+        # Initialize per-project vector store (best-effort)
         try:
-            # Add project root to path
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            
-            # Import the enhanced test case generator
-            from src.generators.test_case_generator import TestCaseGenerator
-            
-            # Initialize enhanced test case generator (AI-first with intelligent fallback)
-            generator = TestCaseGenerator()
-            
-            # Generate test cases using enhanced LLM + FAISS
-            if hasattr(generator, 'generate_test_cases_with_metadata'):
-                result = generator.generate_test_cases_with_metadata(
-                    description, 
-                    acceptance_criteria,
-                    use_knowledge=use_knowledge
-                )
-                
-                if result["success"]:
-                    test_cases = result["test_cases"]
-                    generation_metadata = result["metadata"]
-                    print(f"[SYSTEM] ✅ Generated using {generation_metadata.get('model_used', 'AI')} in {generator.ai_mode.upper()} mode")
-                else:
-                    raise Exception(f"Enhanced generation failed: {result.get('error', 'Unknown error')}")
-            else:
-                # Fallback to basic method
-                test_cases = generator.generate_test_cases(
-                    description, 
-                    acceptance_criteria,
-                    use_knowledge=use_knowledge
-                )
-                generation_metadata = {
-                    "generated_at": datetime.now().isoformat(),
-                    "model_used": "llama2",
-                    "ai_mode": getattr(generator, 'ai_mode', 'unknown')
-                }
-            
-            # Import and apply post-processing to remove unwanted fields
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            from src.generators.post_processor import post_process_test_cases
-            
-            # Apply post-processing
-            processed_test_cases = post_process_test_cases(test_cases)
-            
-            # Save output to file
-            output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_filename = f"output_{timestamp}.txt"
-            output_path = os.path.join(output_dir, output_filename)
-            
-            # Create output directory if it doesn't exist
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-                
-            # Write processed test cases to file
-            with open(output_path, "w") as f:
-                f.write(processed_test_cases)
-            
-            # Log success with essential information
-            ai_mode = getattr(generator, 'ai_mode', 'unknown')
-            print(f"[SYSTEM] ✅ Test cases generated using {ai_mode.upper()} mode")
-            print(f"[SYSTEM] 📁 Output saved to: {output_path}")
-            
-            # Log the token usage with enhanced metadata
-            token_counter.log_request(
-                request_type="test_case_generation",
-                prompt_text=prompt_text,
-                completion_text=test_cases,
-                metadata={
-                    "source": "EnhancedTestCaseGenerator",
-                    "ai_mode": ai_mode,
-                    "use_knowledge": use_knowledge,
-                    "use_retrieval": use_retrieval,
-                    "faiss_enabled": hasattr(generator, 'vector_store') and generator.vector_store is not None,
-                    **generation_metadata
-                }
+            from vector_store import initialize_vector_store
+            initialize_vector_store(project_name=project_name)
+        except Exception:
+            pass
+
+        # Create generator bound to project_name
+        generator = TestCaseGenerator(project_name=project_name)
+
+        # Generate
+        if hasattr(generator, 'generate_test_cases_with_metadata'):
+            result = generator.generate_test_cases_with_metadata(
+                description,
+                acceptance_criteria,
+                use_knowledge=use_knowledge
             )
-            
-            return jsonify({
-                "success": True,
-                "test_cases": processed_test_cases,
-                "source": "enhanced_llm_generator",
-                "ai_mode": ai_mode,
-                "metadata": {
-                    **generation_metadata,
-                    "faiss_enabled": hasattr(generator, 'vector_store') and generator.vector_store is not None,
-                    "fallback_reason": getattr(generator, 'fallback_reason', None)
-                },
-                "output_file": output_path
-            })
-            
-        except ImportError as e:
-            print(f"❌ Could not import Enhanced TestCaseGenerator: {str(e)}")
-            print("🔄 This indicates a critical system configuration issue")
-            return jsonify({
-                "success": False,
-                "error": "Enhanced test case generator not available",
-                "details": str(e),
-                "suggestion": "Please ensure all dependencies are installed and project structure is correct"
-            }), 500
-        except Exception as e:
-            print(f"❌ Error using Enhanced TestCaseGenerator: {str(e)}")
-            print(f"📋 Exception details: {traceback.format_exc()}")
-            
-            # Check if it's an AI component failure
-            if "ollama" in str(e).lower() or "faiss" in str(e).lower():
-                return jsonify({
-                    "success": False,
-                    "error": "AI components unavailable",
-                    "details": str(e),
-                    "suggestion": "Please ensure Ollama is running and FAISS vector store is initialized"
-                }), 503
+            if result.get('success'):
+                test_cases = result['test_cases']
+                generation_metadata = result['metadata']
+                print(f"[SYSTEM] ✅ Generated using {generation_metadata.get('model_used', 'AI')} in {generator.ai_mode.upper()} mode")
             else:
-                return jsonify({
-                    "success": False,
-                    "error": "Test case generation failed",
-                    "details": str(e)
-                }), 500
-        
+                raise Exception(f"Enhanced generation failed: {result.get('error', 'Unknown error')}")
+        else:
+            test_cases = generator.generate_test_cases(
+                description,
+                acceptance_criteria,
+                use_knowledge=use_knowledge
+            )
+            generation_metadata = {
+                "generated_at": datetime.now().isoformat(),
+                "model_used": "llama2",
+                "ai_mode": getattr(generator, 'ai_mode', 'unknown'),
+            }
+
+        # Post-process
+        processed_test_cases = post_process_test_cases(test_cases)
+
+        # Save output
+        output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
+        os.makedirs(output_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = os.path.join(output_dir, f"output_{timestamp}.txt")
+        with open(output_path, 'w') as f:
+            f.write(processed_test_cases)
+
+        ai_mode = getattr(generator, 'ai_mode', 'unknown')
+        print(f"[SYSTEM] ✅ Test cases generated using {ai_mode.upper()} mode")
+        print(f"[SYSTEM] 📁 Output saved to: {output_path}")
+
+        # Log usage
+        token_counter.log_request(
+            request_type="test_case_generation",
+            prompt_text=prompt_text,
+            completion_text=test_cases,
+            metadata={
+                "source": "EnhancedTestCaseGenerator",
+                "ai_mode": ai_mode,
+                "use_knowledge": use_knowledge,
+                "use_retrieval": use_retrieval,
+                "project_name": project_name,
+                "faiss_enabled": hasattr(generator, 'vector_store') and generator.vector_store is not None,
+                **generation_metadata,
+            },
+        )
+
+        return jsonify({
+            "success": True,
+            "test_cases": processed_test_cases,
+            "source": "enhanced_llm_generator",
+            "ai_mode": ai_mode,
+            "metadata": {
+                **generation_metadata,
+                "project_name": project_name,
+                "faiss_enabled": hasattr(generator, 'vector_store') and generator.vector_store is not None,
+                "fallback_reason": getattr(generator, 'fallback_reason', None),
+            },
+            "output_file": output_path,
+        })
+
+    except ImportError as e:
+        print(f"❌ Could not import Enhanced TestCaseGenerator: {str(e)}")
+        print("🔄 This indicates a critical system configuration issue")
+        return jsonify({
+            "success": False,
+            "error": "Enhanced test case generator not available",
+            "details": str(e),
+            "suggestion": "Please ensure all dependencies are installed and project structure is correct",
+        }), 500
     except Exception as e:
         print(f"❌ Error generating test cases: {str(e)}")
         print(f"📋 Exception details: {traceback.format_exc()}")
+        if "ollama" in str(e).lower() or "faiss" in str(e).lower():
+            return jsonify({
+                "success": False,
+                "error": "AI components unavailable",
+                "details": str(e),
+                "suggestion": "Please ensure Ollama is running and FAISS vector store is initialized",
+            }), 503
         return jsonify({
-            'success': False,
-            'error': str(e),
-            'error_type': type(e).__name__,
-            'message': 'Test case generation failed. Please check system status via /health endpoint.'
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "message": "Test case generation failed. Please check system status via /health endpoint.",
         }), 500
 
 if __name__ == '__main__':

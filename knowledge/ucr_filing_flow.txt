@@ -1,6 +1,0 @@
-UCR Filing Flow Knowledge
-
-1. Navigate to the UCR Home page.
-2. There is a text field to enter the USDOT Number on the homepage.
-3. If the entered USDOT Number is within 5-12 digits and is a valid entry, the user is redirected to the UCR workflow with autofilled details.
-4. If the USDOT Number is not present in the database, the user is taken to the UCR registration page.
