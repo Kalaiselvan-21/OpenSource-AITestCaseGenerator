@@ -248,3 +248,8 @@ yarn-error.log*
 # Backup files
 *.bak
 *.backup
+
+# Sensitive domain knowledge files (ignored going forward)
+backend/knowledge_base/test_case_examples/test_case_examples.txt
+backend/knowledge_base/test_case_examples/test_cases_UCR.txt
+backend/knowledge_base/overall_functionality.txt
