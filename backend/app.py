@@ -261,8 +261,8 @@ def health_check():
 @app.route('/generate-test-cases', methods=['POST'])
 def generate_test_cases():
     """
-    Enhanced endpoint to generate test cases using LLM models with knowledge base integration,
-    and support optional project_name for per-project vector store isolation.
+    Enhanced endpoint to generate test cases using LLM models with knowledge base integration.
+    Requires project_name to route to the correct per-project vector store.
     """
     try:
         data = request.get_json(silent=True) or {}
@@ -273,7 +273,11 @@ def generate_test_cases():
         acceptance_criteria = data.get('acceptance_criteria') or ''
         use_knowledge = bool(data.get('use_knowledge', True))
         use_retrieval = bool(data.get('use_retrieval', True))
-        project_name = (data.get('project_name') or '').strip() or None
+        project_name = (data.get('project_name') or '').strip()
+
+        # Enforce mandatory project_name
+        if not project_name:
+            return jsonify({"error": "Missing required field: project_name"}), 400
 
         # Optional summary derivation
         summary = data.get('summary') or ''
@@ -289,11 +293,10 @@ def generate_test_cases():
                 )
             }), 400
 
-        # Validate project_name format if provided
-        if project_name:
-            import re
-            if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
-                return jsonify({"error": "Invalid project_name. Use only alphanumeric characters, underscores, and hyphens."}), 400
+        # Validate project_name format
+        import re
+        if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
+            return jsonify({"error": "Invalid project_name. Use only alphanumeric characters, underscores, and hyphens."}), 400
 
         prompt_text = f"Description: {description}\n\nAcceptance Criteria: {acceptance_criteria}"
 
