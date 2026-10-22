@@ -10,7 +10,7 @@ langchain-ollama>=0.3.0
 
 # Web framework
 flask==2.3.3
-flask-cors==4.0.0
+flask-cors==6.0.0
 
 # Local LLM integration (open source)
 ollama>=0.5.1
